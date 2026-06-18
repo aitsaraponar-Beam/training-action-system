@@ -43139,526 +43139,609 @@ html body .sidebar .sidebar-system-footer span{
 
 
 
-<!-- === SUPABASE SAVE CLASS 3A: separate Add Class button only === -->
-<style id="supabase-save-class-3a-style">
-.supabase-save-hint{
+
+
+
+<!-- === NEXT PHASE COMPACT POPUP V2: compact card + modal tabs === -->
+<style id="next-phase-compact-popup-v2-style">
+.next-phase-compact-card{
+  background:#fff;
+  border:1px solid #DCEBFF;
+  border-radius:24px;
+  padding:16px 18px;
+  box-shadow:0 14px 34px rgba(8,36,92,.06);
   display:flex;
   align-items:center;
-  gap:8px;
-  margin-top:8px;
-  color:#64748B;
-  font-size:12px;
-  font-weight:850;
-  line-height:1.4;
-}
-.btn.supabase-save-btn{
-  background:linear-gradient(135deg,#047857,#059669);
-  color:#fff;
-  border-color:#047857;
-}
-.btn.supabase-save-btn:hover{
-  filter:brightness(.98);
-}
-</style>
-
-<script id="supabase-save-class-3a-script">
-(function(){
-  'use strict';
-  if(window.__supabaseSaveClass3A)return;
-  window.__supabaseSaveClass3A=true;
-
-  const STORAGE_KEY='trainingActionSupabaseReadonlyConfigV1';
-
-  function getConfig(){
-    try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{};}catch(e){return {};}
-  }
-
-  function safeIcon(name,size){
-    try{if(typeof icon==='function')return icon(name,size||16);}catch(e){}
-    return '';
-  }
-
-  function safeVal(id){
-    try{return (document.getElementById(id)?.value || '').trim();}catch(e){return '';}
-  }
-
-  function ensureSupabaseSdk(){
-    return new Promise((resolve,reject)=>{
-      if(window.supabase && typeof window.supabase.createClient==='function'){resolve();return;}
-      const existing=document.querySelector('script[data-supabase-js-v2]');
-      if(existing){
-        existing.addEventListener('load',()=>resolve(),{once:true});
-        existing.addEventListener('error',()=>reject(new Error('Cannot load Supabase SDK')),{once:true});
-        setTimeout(()=>{
-          if(window.supabase && typeof window.supabase.createClient==='function')resolve();
-        },400);
-        return;
-      }
-      const s=document.createElement('script');
-      s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-      s.setAttribute('data-supabase-js-v2','true');
-      s.onload=()=>resolve();
-      s.onerror=()=>reject(new Error('Cannot load Supabase SDK'));
-      document.head.appendChild(s);
-    });
-  }
-
-  function readSupabaseConfig(){
-    const cfg=getConfig();
-    const url=(cfg.url || document.getElementById('supabaseReadonlyUrl')?.value || '').trim();
-    const key=(cfg.key || document.getElementById('supabaseReadonlyKey')?.value || '').trim();
-    return {url,key};
-  }
-
-  function buildSupabaseClassPayload(){
-    if(typeof captureAddClassDraft==='function'){
-      try{captureAddClassDraft();}catch(e){}
-    }
-    const d=state?.ui?.addClassDraft || {};
-    const trainingType=d.trainingType || safeVal('trainingType') || 'Inhouse';
-    const now=new Date();
-    const stamp=now.getFullYear().toString()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0')+String(now.getSeconds()).padStart(2,'0');
-    const courseName=d.courseName || safeVal('courseName');
-    const payload={
-      class_code:'CLS-SB-'+stamp,
-      course_name:courseName,
-      batch:d.batch || safeVal('batch') || '',
-      training_type:trainingType,
-      learning_type:d.learningType || safeVal('learningType') || '',
-      target_level:d.targetLevel || safeVal('targetLevel') || '',
-      site:d.site || safeVal('site') || '',
-      start_date:d.startDate || safeVal('startDate') || null,
-      end_date:d.endDate || safeVal('endDate') || d.startDate || safeVal('startDate') || null,
-      training_hour:Number(d.trainingHour || safeVal('trainingHour') || 0),
-      institute:d.institute || safeVal('institute') || '',
-      instructor_name:d.instructorName || safeVal('instructorName') || '',
-      hotel:d.hotel || safeVal('hotel') || '',
-      floor:d.floor || safeVal('floor') || '',
-      room:d.room || safeVal('room') || '',
-      workflow_status:'Approval Form',
-      training_status:d.classStatus || safeVal('classStatus') || 'TBC',
-      dsd_status:'',
-      staff_list_file:state?.ui?.pendingStaffListFile || state?.ui?.staffImportFileName || '',
-      note:'',
-      raw_data:{
-        source:'training-action-github-pages',
-        phase:'3A-save-to-supabase-button',
-        localDraft:d,
-        savedAt:new Date().toISOString()
-      }
-    };
-    return payload;
-  }
-
-  window.saveCurrentAddClassToSupabase3A = async function(){
-    const payload=buildSupabaseClassPayload();
-
-    if(!payload.course_name){
-      alert('กรุณากรอก Course Name ก่อน Save to Supabase');
-      return;
-    }
-
-    const {url,key}=readSupabaseConfig();
-    if(!url || !key){
-      alert('ยังไม่มี Supabase config\n\nให้ไปที่ Setting → สำรองข้อมูล → ใส่ Project URL / key แล้วกด Save Config ก่อน');
-      return;
-    }
-
-    const ok=confirm(
-      'Save to Supabase?\n\n'+
-      'รอบนี้จะบันทึกเข้า Supabase table: classes เท่านั้น\n'+
-      'ยังไม่บันทึกเข้า Class Master เดิม และยังไม่แก้ปุ่ม Save Class เดิม\n\n'+
-      'Course: '+payload.course_name
-    );
-    if(!ok)return;
-
-    try{
-      if(typeof showFlowToast==='function')showFlowToast('Saving class to Supabase...');
-      await ensureSupabaseSdk();
-      const client=window.supabase.createClient(url,key);
-      const {data,error}=await client
-        .from('classes')
-        .insert(payload)
-        .select('id,class_code,course_name,site,start_date,training_status')
-        .single();
-
-      if(error){
-        alert(
-          'Save to Supabase ไม่ผ่าน\n\n'+
-          error.message+
-          '\n\nจุดที่ควรเช็ก: RLS insert policy / column name / Project URL & key'
-        );
-        return;
-      }
-
-      alert(
-        'Save to Supabase: SUCCESS ✅\n\n'+
-        'Class Code: '+(data?.class_code || payload.class_code)+'\n'+
-        'Course: '+(data?.course_name || payload.course_name)+'\n\n'+
-        'ขั้นต่อไป: ไปที่ Setting → สำรองข้อมูล แล้วกด Test Read Classes หรือ Load Supabase Classes to App เพื่อดูข้อมูลนี้ในระบบ'
-      );
-      if(typeof showFlowToast==='function')showFlowToast('Saved to Supabase');
-    }catch(err){
-      alert('เกิด error ระหว่าง Save to Supabase\n\n'+String(err));
-    }
-  };
-
-  function supabaseSaveButtonHtml(){
-    return `<button type="button" class="btn supabase-save-btn" onclick="saveCurrentAddClassToSupabase3A()">${safeIcon('database',16)} Save to Supabase</button>`;
-  }
-
-  function enhanceRenderAddClass(){
-    if(typeof window.renderAddClass!=='function' || window.renderAddClass.__supabaseSave3A)return;
-    const previous=window.renderAddClass;
-    window.renderAddClass=function(){
-      let html=previous.apply(this,arguments);
-      if(!html.includes('Save to Supabase')){
-        html=html.replace(
-          /<div class="form-actions"><button class="btn" onclick="openSaveClassConfirmation\(\)">([\s\S]*?)Save Class<\/button><\/div>/,
-          `<div class="form-actions"><button class="btn" onclick="openSaveClassConfirmation()">$1Save Class</button>${supabaseSaveButtonHtml()}</div>
-           <div class="supabase-save-hint">${safeIcon('info',14)} Save Class = บันทึกเข้าเว็บเดิม / Save to Supabase = ทดสอบบันทึกเข้า database จริง</div>`
-        );
-      }
-      return html;
-    };
-    window.renderAddClass.__supabaseSave3A=true;
-  }
-
-  function injectButtonFallback(){
-    if(state?.active!=='addClass')return;
-    if(document.getElementById('saveToSupabase3AFallbackBtn'))return;
-    const actions=[...document.querySelectorAll('.form-actions')].find(el=>el.textContent.includes('Save Class'));
-    if(!actions)return;
-    const btn=document.createElement('button');
-    btn.type='button';
-    btn.id='saveToSupabase3AFallbackBtn';
-    btn.className='btn supabase-save-btn';
-    btn.innerHTML=safeIcon('database',16)+' Save to Supabase';
-    btn.onclick=window.saveCurrentAddClassToSupabase3A;
-    actions.appendChild(btn);
-    const hint=document.createElement('div');
-    hint.className='supabase-save-hint';
-    hint.innerHTML=safeIcon('info',14)+' Save Class = บันทึกเข้าเว็บเดิม / Save to Supabase = ทดสอบบันทึกเข้า database จริง';
-    actions.insertAdjacentElement('afterend',hint);
-  }
-
-  enhanceRenderAddClass();
-
-  const prevRender=window.render;
-  if(typeof prevRender==='function'&&!prevRender.__supabaseSave3A){
-    window.render=function(){
-      enhanceRenderAddClass();
-      const result=prevRender.apply(this,arguments);
-      try{setTimeout(injectButtonFallback,0);}catch(e){}
-      return result;
-    };
-    window.render.__supabaseSave3A=true;
-  }
-
-  setTimeout(injectButtonFallback,0);
-})();
-</script>
-<!-- === END SUPABASE SAVE CLASS 3A === -->
-
-
-
-<!-- === SUPABASE SAVE CLASS 3B: visible fallback card for Add Class === -->
-<style id="supabase-save-class-3b-style">
-.supabase-save-3b-card{
-  margin:14px 0;
-  border:1px solid #A7F3D0;
-  background:linear-gradient(135deg,#ECFDF5,#FFFFFF);
-  border-radius:22px;
-  padding:14px;
-  box-shadow:0 14px 30px rgba(4,120,87,.08);
-}
-.supabase-save-3b-head{
-  display:flex;
   justify-content:space-between;
-  align-items:flex-start;
-  gap:12px;
-  margin-bottom:10px;
+  gap:14px;
 }
-.supabase-save-3b-head h4{
+.next-phase-compact-card h3{
   margin:0;
-  color:#065F46;
-  font-size:15px;
+  color:#08245C;
+  font-size:17px;
   font-weight:1000;
 }
-.supabase-save-3b-head p{
+.next-phase-compact-card p{
   margin:5px 0 0;
   color:#64748B;
   font-size:12px;
   font-weight:850;
   line-height:1.45;
 }
-.supabase-save-3b-pill{
-  display:inline-flex;
-  align-items:center;
-  border:1px solid #A7F3D0;
-  background:#FFFFFF;
-  color:#047857;
-  border-radius:999px;
-  padding:7px 10px;
-  white-space:nowrap;
-  font-size:11px;
-  font-weight:1000;
+.next-phase-compact-left{
+  min-width:0;
 }
-.btn.supabase-save-btn{
-  background:linear-gradient(135deg,#047857,#059669);
-  color:#fff;
-  border-color:#047857;
-}
-.supabase-save-3b-actions{
+.next-phase-compact-actions{
   display:flex;
   gap:8px;
   flex-wrap:wrap;
-  align-items:center;
+  justify-content:flex-end;
 }
-.supabase-save-3b-note{
-  margin-top:9px;
+.next-phase-compact-actions .btn{
+  min-height:38px;
+  border-radius:14px;
+  padding:9px 13px;
+  font-size:12px;
+}
+.next-phase-mini-badge{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid #FDE68A;
+  background:#FFFBEB;
+  color:#B45309;
+  border-radius:999px;
+  padding:6px 9px;
+  font-size:11px;
+  font-weight:1000;
+  white-space:nowrap;
+  margin-left:8px;
+}
+.next-phase-modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  background:rgba(15,23,42,.52);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:22px;
+}
+.next-phase-modal{
+  width:min(860px,96vw);
+  max-height:88vh;
+  overflow:hidden;
+  background:#fff;
+  border-radius:28px;
+  box-shadow:0 28px 80px rgba(2,8,23,.28);
+  border:1px solid #DCEBFF;
+  display:grid;
+  grid-template-rows:auto auto minmax(0,1fr);
+}
+.next-phase-modal-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  padding:20px 22px 14px;
+  border-bottom:1px solid #EEF4FF;
+  background:linear-gradient(135deg,#F8FBFF,#FFFFFF);
+}
+.next-phase-modal-head h3{
+  margin:0;
+  color:#08245C;
+  font-size:20px;
+  font-weight:1000;
+}
+.next-phase-modal-head p{
+  margin:5px 0 0;
+  color:#64748B;
+  font-size:13px;
+  font-weight:850;
+  line-height:1.45;
+}
+.next-phase-close{
+  border:1px solid #E2E8F0;
+  background:#fff;
+  color:#475569;
+  border-radius:14px;
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  font-weight:1000;
+}
+.next-phase-popup-tabs{
+  display:flex;
+  gap:8px;
+  padding:12px 18px;
+  border-bottom:1px solid #EEF4FF;
+  background:#fff;
+  overflow:auto;
+}
+.next-phase-popup-tab{
+  border:1px solid #DCEBFF;
+  background:#F8FBFF;
+  color:#475569;
+  border-radius:999px;
+  padding:9px 12px;
+  font-size:12px;
+  font-weight:1000;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.next-phase-popup-tab.active{
+  background:#075FDB;
+  color:#fff;
+  border-color:#075FDB;
+}
+.next-phase-popup-body{
+  padding:18px 22px 22px;
+  overflow:auto;
+}
+.next-phase-popup-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.next-phase-popup-card{
+  border:1px solid #E2EDFF;
+  background:linear-gradient(135deg,#F8FBFF,#FFFFFF);
+  border-radius:20px;
+  padding:14px;
+}
+.next-phase-popup-card.full{
+  grid-column:1/-1;
+}
+.next-phase-popup-card h4{
+  margin:0 0 8px;
+  color:#08245C;
+  font-size:14px;
+  font-weight:1000;
+}
+.next-phase-popup-card p,
+.next-phase-popup-card li{
+  color:#64748B;
+  font-size:13px;
+  font-weight:850;
+  line-height:1.5;
+}
+.next-phase-popup-card p{
+  margin:0;
+}
+.next-phase-popup-card ul,
+.next-phase-popup-card ol{
+  margin:0;
+  padding-left:20px;
+  display:grid;
+  gap:7px;
+}
+.next-phase-status-line{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 10px;
+  border:1px solid #EAF3FF;
+  background:#fff;
+  border-radius:14px;
+  color:#475569;
+  font-size:13px;
+  font-weight:900;
+}
+.next-phase-status-list{
+  display:grid;
+  gap:8px;
+}
+.next-phase-timeline{
+  display:grid;
+  gap:10px;
+}
+.next-phase-timeline-row{
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr);
+  gap:10px;
+  align-items:start;
+}
+.next-phase-timeline-num{
+  width:30px;
+  height:30px;
+  border-radius:999px;
+  background:#EFF6FF;
+  border:1px solid #BFDBFE;
+  color:#075FDB;
+  font-size:12px;
+  font-weight:1000;
+  display:grid;
+  place-items:center;
+}
+.next-phase-timeline-row strong{
+  color:#08245C;
+  font-size:13px;
+  font-weight:1000;
+}
+.next-phase-timeline-row span{
+  display:block;
   color:#64748B;
   font-size:12px;
   font-weight:850;
   line-height:1.45;
+  margin-top:3px;
+}
+@media(max-width:760px){
+  .next-phase-compact-card{display:grid}
+  .next-phase-compact-actions{justify-content:flex-start}
+  .next-phase-popup-grid{grid-template-columns:1fr}
+  .next-phase-modal-backdrop{padding:12px}
 }
 </style>
 
-<script id="supabase-save-class-3b-script">
+<script id="next-phase-compact-popup-v2-script">
 (function(){
   'use strict';
-  if(window.__supabaseSaveClass3B)return;
-  window.__supabaseSaveClass3B=true;
+  if(window.__nextPhaseCompactPopupV2)return;
+  window.__nextPhaseCompactPopupV2=true;
 
-  const STORAGE_KEY='trainingActionSupabaseReadonlyConfigV1';
-
-  function getConfig(){
-    try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{};}catch(e){return {};}
-  }
+  window.__nextPhaseActiveTab = window.__nextPhaseActiveTab || 'status';
 
   function safeIcon(name,size){
     try{if(typeof icon==='function')return icon(name,size||16);}catch(e){}
     return '';
   }
 
-  function findInputByNames(names){
-    const selectors=[];
-    names.forEach(n=>{
-      selectors.push(`#${n}`);
-      selectors.push(`[name="${n}"]`);
-      selectors.push(`[data-field="${n}"]`);
-    });
-    for(const sel of selectors){
-      const el=document.querySelector(sel);
-      if(el && 'value' in el)return el;
-    }
-    return null;
-  }
-
-  function readVal(names, fallback=''){
-    const el=findInputByNames(Array.isArray(names)?names:[names]);
-    return (el?.value || fallback || '').trim();
-  }
-
-  function ensureSupabaseSdk(){
-    return new Promise((resolve,reject)=>{
-      if(window.supabase && typeof window.supabase.createClient==='function'){resolve();return;}
-      const existing=document.querySelector('script[data-supabase-js-v2]');
-      if(existing){
-        existing.addEventListener('load',()=>resolve(),{once:true});
-        existing.addEventListener('error',()=>reject(new Error('Cannot load Supabase SDK')),{once:true});
-        setTimeout(()=>{if(window.supabase && typeof window.supabase.createClient==='function')resolve();},400);
-        return;
-      }
-      const s=document.createElement('script');
-      s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-      s.setAttribute('data-supabase-js-v2','true');
-      s.onload=()=>resolve();
-      s.onerror=()=>reject(new Error('Cannot load Supabase SDK'));
-      document.head.appendChild(s);
-    });
-  }
-
-  function readSupabaseConfig(){
-    const cfg=getConfig();
-    return {
-      url:(cfg.url || document.getElementById('supabaseReadonlyUrl')?.value || '').trim(),
-      key:(cfg.key || document.getElementById('supabaseReadonlyKey')?.value || '').trim()
-    };
-  }
-
-  function getDraft(){
-    try{
-      if(typeof captureAddClassDraft==='function')captureAddClassDraft();
-    }catch(e){}
-    return state?.ui?.addClassDraft || {};
-  }
-
-  function makeClassCode(){
-    const n=new Date();
-    const stamp=n.getFullYear().toString()
-      +String(n.getMonth()+1).padStart(2,'0')
-      +String(n.getDate()).padStart(2,'0')
-      +'-'
-      +String(n.getHours()).padStart(2,'0')
-      +String(n.getMinutes()).padStart(2,'0')
-      +String(n.getSeconds()).padStart(2,'0');
-    return 'CLS-SB-'+stamp;
-  }
-
-  function buildPayload(){
-    const d=getDraft();
-    const courseName=d.courseName || readVal(['courseName','course-name','addCourseName','course']);
-    const trainingType=d.trainingType || readVal(['trainingType','training-type'],'Inhouse');
-    const startDate=d.startDate || readVal(['startDate','start-date','trainingDate','date']);
-    const endDate=d.endDate || readVal(['endDate','end-date'],startDate);
-
-    return {
-      class_code:makeClassCode(),
-      course_name:courseName,
-      batch:d.batch || readVal(['batch','classBatch'],''),
-      training_type:trainingType || 'Inhouse',
-      learning_type:d.learningType || readVal(['learningType','learning-type'],''),
-      target_level:d.targetLevel || readVal(['targetLevel','target-level'],''),
-      site:d.site || readVal(['site','trainingSite'],''),
-      start_date:startDate || null,
-      end_date:endDate || startDate || null,
-      training_hour:Number(d.trainingHour || readVal(['trainingHour','training-hour'],'0') || 0),
-      institute:d.institute || readVal(['institute'],''),
-      instructor_name:d.instructorName || readVal(['instructorName','instructor-name','instructor'],''),
-      hotel:d.hotel || readVal(['hotel'],''),
-      floor:d.floor || readVal(['floor'],''),
-      room:d.room || readVal(['room'],''),
-      workflow_status:'Approval Form',
-      training_status:d.classStatus || readVal(['classStatus','trainingStatus'],'TBC') || 'TBC',
-      dsd_status:'',
-      staff_list_file:state?.ui?.pendingStaffListFile || state?.ui?.staffImportFileName || '',
-      note:'',
-      raw_data:{
-        source:'training-action-github-pages',
-        phase:'3B-visible-save-card',
-        localDraft:d,
-        savedAt:new Date().toISOString()
-      }
-    };
-  }
-
-  window.saveCurrentAddClassToSupabase3A = async function(){
-    const payload=buildPayload();
-
-    if(!payload.course_name){
-      alert('กรุณากรอก Course Name ก่อน Save to Supabase');
-      return;
-    }
-
-    const {url,key}=readSupabaseConfig();
-    if(!url || !key){
-      alert('ยังไม่มี Supabase config\n\nให้ไปที่ Setting → สำรองข้อมูล → ใส่ Project URL / key แล้วกด Save Config ก่อน');
-      return;
-    }
-
-    const ok=confirm(
-      'Save to Supabase?\n\n'+
-      'รอบนี้จะบันทึกเข้า Supabase table: classes เท่านั้น\n'+
-      'ยังไม่แตะปุ่ม Save Class เดิม\n\n'+
-      'Course: '+payload.course_name
-    );
-    if(!ok)return;
-
-    try{
-      if(typeof showFlowToast==='function')showFlowToast('Saving class to Supabase...');
-      await ensureSupabaseSdk();
-      const client=window.supabase.createClient(url,key);
-      const {data,error}=await client
-        .from('classes')
-        .insert(payload)
-        .select('id,class_code,course_name,site,start_date,training_status')
-        .single();
-
-      if(error){
-        alert(
-          'Save to Supabase ไม่ผ่าน\n\n'+
-          error.message+
-          '\n\nจุดที่ควรเช็ก: RLS insert policy / column name / Project URL & key'
-        );
-        return;
-      }
-
-      alert(
-        'Save to Supabase: SUCCESS ✅\n\n'+
-        'Class Code: '+(data?.class_code || payload.class_code)+'\n'+
-        'Course: '+(data?.course_name || payload.course_name)+'\n\n'+
-        'ต่อไปไปที่ Setting → สำรองข้อมูล แล้วกด Test Read Classes เพื่อเช็กข้อมูลใหม่'
-      );
-      if(typeof showFlowToast==='function')showFlowToast('Saved to Supabase');
-    }catch(err){
-      alert('เกิด error ระหว่าง Save to Supabase\n\n'+String(err));
-    }
-  };
-
-  function isAddClassPage(){
-    if(state?.active==='addClass')return true;
-    const text=(document.body?.innerText || '').toLowerCase();
-    return text.includes('add class') && (text.includes('course name') || text.includes('save class'));
-  }
-
-  function cardHtml(){
-    return `<section id="supabaseSave3BCard" class="supabase-save-3b-card">
-      <div class="supabase-save-3b-head">
-        <div>
-          <h4>${safeIcon('database',16)} Supabase Test Save</h4>
-          <p>ปุ่มนี้ใช้ทดสอบบันทึก Class ปัจจุบันเข้า Supabase เท่านั้น ปุ่ม Save Class เดิมยังทำงานเหมือนเดิม</p>
-        </div>
-        <span class="supabase-save-3b-pill">Phase 3A</span>
+  function compactCardHtml(){
+    return `<section id="nextPhaseCompactCard" class="next-phase-compact-card">
+      <div class="next-phase-compact-left">
+        <h3>${safeIcon('workflow',17)} Next Phase <span class="next-phase-mini-badge">Paused</span></h3>
+        <p>สรุปสถานะ Supabase และแผนงานถัดไป เก็บไว้ใน Popup เพื่อลดความลายตาของหน้า Backup</p>
       </div>
-      <div class="supabase-save-3b-actions">
-        <button type="button" class="btn supabase-save-btn" onclick="saveCurrentAddClassToSupabase3A()">${safeIcon('database',16)} Save to Supabase</button>
+      <div class="next-phase-compact-actions">
+        <button type="button" class="btn secondary" onclick="openNextPhasePopup('status')">${safeIcon('file',15)} View Next Phase</button>
       </div>
-      <div class="supabase-save-3b-note">กรอก Course Name อย่างน้อย 1 ค่า แล้วกด Save to Supabase เพื่อทดสอบ insert เข้า table classes</div>
     </section>`;
   }
 
-  function injectVisibleCard(){
-    if(!isAddClassPage())return;
-    if(document.getElementById('supabaseSave3BCard'))return;
+  function tabBtn(id,label){
+    return `<button type="button" class="next-phase-popup-tab ${window.__nextPhaseActiveTab===id?'active':''}" onclick="switchNextPhasePopupTab('${id}')">${label}</button>`;
+  }
 
-    const targets=[
-      document.querySelector('.form-actions'),
-      [...document.querySelectorAll('button')].find(b=>(b.textContent||'').trim().toLowerCase().includes('save class'))?.parentElement,
-      document.querySelector('form'),
-      document.querySelector('.page-body'),
-      document.querySelector('#app')
-    ].filter(Boolean);
+  function statusContent(){
+    return `<div class="next-phase-popup-grid">
+      <div class="next-phase-popup-card full">
+        <h4>ตอนนี้ระบบอยู่ขั้นตอนไหน</h4>
+        <p>สถานะปัจจุบันคือ <strong>Frontend Stable + Supabase Proof of Concept ผ่านแล้ว</strong> แต่ยัง Pause เพราะยังไม่ได้ใช้งานจริง</p>
+      </div>
+      <div class="next-phase-popup-card">
+        <h4>ทำสำเร็จแล้ว</h4>
+        <div class="next-phase-status-list">
+          <div class="next-phase-status-line">✅ GitHub Pages เปิดระบบได้</div>
+          <div class="next-phase-status-line">✅ Supabase เชื่อมต่อได้</div>
+          <div class="next-phase-status-line">✅ Test Read Classes ผ่าน</div>
+          <div class="next-phase-status-line">✅ Load Classes เข้าเว็บผ่าน</div>
+          <div class="next-phase-status-line">✅ Save to Supabase เคยทดสอบผ่าน</div>
+        </div>
+      </div>
+      <div class="next-phase-popup-card">
+        <h4>โหมดตอนนี้</h4>
+        <ul>
+          <li>ยังไม่เปิด Supabase เป็นฐานหลัก</li>
+          <li>ยังไม่เปิด sync อัตโนมัติเต็มรูปแบบ</li>
+          <li>ยังไม่ทำ Import Class File เข้า Supabase</li>
+          <li>Staff List Import ถูกตัดออกจากแผนแล้ว</li>
+        </ul>
+      </div>
+    </div>`;
+  }
 
-    const target=targets[0];
-    if(!target)return;
+  function nextContent(){
+    return `<div class="next-phase-popup-grid">
+      <div class="next-phase-popup-card full">
+        <h4>แผนถัดไปเมื่อกลับมาทำต่อ</h4>
+        <div class="next-phase-timeline">
+          <div class="next-phase-timeline-row"><div class="next-phase-timeline-num">1</div><div><strong>Phase 4A: Edit / Update Class to Supabase</strong><span>แก้ข้อมูล Class เดิมแล้ว update แถวเดิมใน Supabase ด้วย class_code</span></div></div>
+          <div class="next-phase-timeline-row"><div class="next-phase-timeline-num">2</div><div><strong>Phase 4B: Save Class Local + Supabase</strong><span>ให้ Save Class บันทึกเว็บเดิมก่อน แล้วค่อย sync Supabase แบบควบคุมได้</span></div></div>
+          <div class="next-phase-timeline-row"><div class="next-phase-timeline-num">3</div><div><strong>Phase 5: Import Class File Preview</strong><span>Import ไฟล์ต้อง Preview / Validate ก่อน ไม่ยิงเข้า Supabase ทันที</span></div></div>
+          <div class="next-phase-timeline-row"><div class="next-phase-timeline-num">4</div><div><strong>Phase 6: Supabase เป็นฐานหลัก</strong><span>ทำเมื่อระบบเริ่มใช้งานจริงและ flow Save / Edit / Import นิ่งแล้ว</span></div></div>
+        </div>
+      </div>
+    </div>`;
+  }
 
-    if(target.classList && target.classList.contains('form-actions')){
-      target.insertAdjacentHTML('afterend',cardHtml());
-    }else{
-      target.insertAdjacentHTML('beforeend',cardHtml());
+  function checklistContent(){
+    return `<div class="next-phase-popup-grid">
+      <div class="next-phase-popup-card">
+        <h4>Checklist ก่อน Resume</h4>
+        <ul>
+          <li>Export Backup JSON เก็บไว้ก่อน</li>
+          <li>ยืนยันวันเริ่มใช้งานจริง</li>
+          <li>ยืนยันคนที่จะ Add / Edit / Import Class</li>
+          <li>Test Save Class เดี่ยวอีก 1 รอบ</li>
+          <li>ค่อยเริ่ม Phase 4A</li>
+        </ul>
+      </div>
+      <div class="next-phase-popup-card">
+        <h4>ยังไม่ทำตอนนี้</h4>
+        <ul>
+          <li>ไม่ทำ Staff List Import</li>
+          <li>ไม่ทำ Participants table</li>
+          <li>ไม่เปิด Import to Supabase ทันที</li>
+          <li>ไม่เปลี่ยน Supabase เป็นฐานหลักจนกว่าจะพร้อม</li>
+        </ul>
+      </div>
+    </div>`;
+  }
+
+  function popupBody(){
+    if(window.__nextPhaseActiveTab==='next')return nextContent();
+    if(window.__nextPhaseActiveTab==='checklist')return checklistContent();
+    return statusContent();
+  }
+
+  function popupHtml(){
+    return `<div id="nextPhasePopupBackdrop" class="next-phase-modal-backdrop" onclick="closeNextPhasePopup(event)">
+      <div class="next-phase-modal" onclick="event.stopPropagation()">
+        <div class="next-phase-modal-head">
+          <div>
+            <h3>${safeIcon('workflow',18)} Next Phase / Supabase Migration Status</h3>
+            <p>ข้อมูลสรุปถูกเก็บไว้ใน Popup เพื่อให้หน้า Backup อ่านง่ายขึ้น</p>
+          </div>
+          <button type="button" class="next-phase-close" onclick="closeNextPhasePopup()">×</button>
+        </div>
+        <div class="next-phase-popup-tabs">
+          ${tabBtn('status','Current Status')}
+          ${tabBtn('next','Next Phase')}
+          ${tabBtn('checklist','Resume Checklist')}
+        </div>
+        <div id="nextPhasePopupBody" class="next-phase-popup-body">
+          ${popupBody()}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  window.openNextPhasePopup=function(tab){
+    window.__nextPhaseActiveTab=tab || 'status';
+    const existing=document.getElementById('nextPhasePopupBackdrop');
+    if(existing)existing.remove();
+    document.body.insertAdjacentHTML('beforeend',popupHtml());
+  };
+
+  window.closeNextPhasePopup=function(evt){
+    if(evt && evt.target && evt.target.id!=='nextPhasePopupBackdrop')return;
+    const el=document.getElementById('nextPhasePopupBackdrop');
+    if(el)el.remove();
+  };
+
+  window.switchNextPhasePopupTab=function(tab){
+    window.__nextPhaseActiveTab=tab || 'status';
+    const existing=document.getElementById('nextPhasePopupBackdrop');
+    if(existing){
+      existing.outerHTML=popupHtml();
     }
+  };
+
+  function injectCompactCard(){
+    if(state?.active!=='settings')return;
+    if((state.ui?.settingsTab || 'system')!=='backup')return;
+    if(document.getElementById('nextPhaseCompactCard'))return;
+
+    const shell=document.querySelector('.settings-backup-modern');
+    if(!shell)return;
+
+    const danger=shell.querySelector('.settings-backup-danger');
+    const temp=document.createElement('div');
+    temp.innerHTML=compactCardHtml();
+    const card=temp.firstElementChild;
+
+    if(danger)shell.insertBefore(card,danger);
+    else shell.appendChild(card);
   }
 
   const prevRender=window.render;
-  if(typeof prevRender==='function'&&!prevRender.__supabaseSave3B){
+  if(typeof prevRender==='function'&&!prevRender.__nextPhaseCompactPopupV2){
     window.render=function(){
       const result=prevRender.apply(this,arguments);
-      try{setTimeout(injectVisibleCard,0);}catch(e){}
+      try{setTimeout(injectCompactCard,0);}catch(e){}
       return result;
     };
-    window.render.__supabaseSave3B=true;
+    window.render.__nextPhaseCompactPopupV2=true;
+  }
+
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape')closeNextPhasePopup();
+  });
+
+  document.addEventListener('click',function(){
+    setTimeout(injectCompactCard,80);
+  },true);
+
+  setTimeout(injectCompactCard,0);
+  setTimeout(injectCompactCard,600);
+})();
+</script>
+<!-- === END NEXT PHASE COMPACT POPUP V2 === -->
+
+
+
+<!-- === MOVE SUPABASE BRIDGE INTO NEXT PHASE POPUP V3 === -->
+<style id="move-supabase-bridge-popup-v3-style">
+.next-phase-popup-body .supabase-bridge-card{
+  box-shadow:none;
+  margin:0;
+}
+.next-phase-popup-bridge-note{
+  margin-bottom:12px;
+  border:1px solid #BFDBFE;
+  background:#F8FBFF;
+  color:#475569;
+  border-radius:16px;
+  padding:11px 13px;
+  font-size:12px;
+  font-weight:850;
+  line-height:1.45;
+}
+</style>
+
+<script id="move-supabase-bridge-popup-v3-script">
+(function(){
+  'use strict';
+  if(window.__moveSupabaseBridgePopupV3)return;
+  window.__moveSupabaseBridgePopupV3=true;
+
+  const STORAGE_KEY='trainingActionSupabaseReadonlyConfigV1';
+  const DEFAULT_URL='https://kpfzptkhggcdeymflmxp.supabase.co';
+
+  function safeIcon(name,size){
+    try{if(typeof icon==='function')return icon(name,size||16);}catch(e){}
+    return '';
+  }
+
+  function getConfig(){
+    try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{};}catch(e){return {};}
+  }
+
+  function escapeAttr(v){
+    return String(v||'').replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  }
+
+  function supabaseBridgePopupHtml(){
+    const cfg=getConfig();
+    const url=cfg.url || DEFAULT_URL;
+    const key=cfg.key || '';
+    return `<div class="next-phase-popup-bridge-note">
+      Supabase Bridge ถูกย้ายมาไว้ใน Popup นี้แล้ว เพื่อให้หน้า Backup ไม่ยาวและไม่ลายตา ใช้สำหรับทดสอบอ่าน/โหลดข้อมูล classes เท่านั้น
+    </div>
+    <section class="supabase-bridge-card" id="supabaseReadonlyBridgeCard">
+      <div class="supabase-bridge-head">
+        <div>
+          <h3>Supabase Read-only Bridge</h3>
+          <p>Test connection to Supabase table <strong>classes</strong>. This phase is read-only / manual and does not make Supabase the main database yet.</p>
+        </div>
+        <span class="supabase-bridge-badge">Paused · Manual Test</span>
+      </div>
+      <div class="supabase-bridge-grid">
+        <label class="supabase-bridge-field">
+          <span>Project URL</span>
+          <input id="supabaseReadonlyUrl" type="text" value="${escapeAttr(url)}" placeholder="https://xxxx.supabase.co">
+        </label>
+        <label class="supabase-bridge-field">
+          <span>Publishable / anon key</span>
+          <input id="supabaseReadonlyKey" type="password" value="${escapeAttr(key)}" placeholder="sb_publishable_... หรือ eyJ...">
+        </label>
+      </div>
+      <div class="supabase-bridge-actions">
+        <button type="button" class="btn secondary" onclick="saveSupabaseReadonlyConfig()">${safeIcon('check',15)} Save Config</button>
+        <button type="button" class="btn" onclick="testSupabaseClassesReadOnly()">${safeIcon('workflow',15)} Test Read Classes</button>
+        <button type="button" class="btn" onclick="loadSupabaseClassesToAppReadonly()">${safeIcon('class',15)} Load Supabase Classes to App</button>
+        <button type="button" class="btn secondary" onclick="clearSupabaseReadonlyConfig()">${safeIcon('delete',15)} Clear</button>
+      </div>
+      <div class="supabase-bridge-output" id="supabaseBridgeOutput">Ready. ใส่ key แล้วกด Save Config หรือ Test Read Classes</div>
+      <div class="supabase-bridge-note">Phase นี้ใช้เพื่อทดสอบเท่านั้น: อ่านข้อมูล / โหลดเข้าเว็บแบบชั่วคราว ยังไม่เปิด Save/Edit/Import อัตโนมัติ</div>
+    </section>`;
+  }
+
+  function removeBridgeFromBackupPage(){
+    if(state?.active!=='settings')return;
+    if((state.ui?.settingsTab || 'system')!=='backup')return;
+    document.querySelectorAll('#supabaseReadonlyBridgeCard').forEach(function(card){
+      if(!card.closest('#nextPhasePopupBackdrop')){
+        card.remove();
+      }
+    });
+  }
+
+  function replacePopupFunctions(){
+    const originalStatus=window.openNextPhasePopup;
+    if(typeof originalStatus!=='function')return;
+
+    window.__nextPhaseOriginalOpen = window.__nextPhaseOriginalOpen || originalStatus;
+
+    window.openNextPhasePopup=function(tab){
+      window.__nextPhaseActiveTab=tab || 'status';
+      const existing=document.getElementById('nextPhasePopupBackdrop');
+      if(existing)existing.remove();
+      document.body.insertAdjacentHTML('beforeend',window.__nextPhasePopupHtmlV3());
+    };
+
+    window.switchNextPhasePopupTab=function(tab){
+      window.__nextPhaseActiveTab=tab || 'status';
+      const existing=document.getElementById('nextPhasePopupBackdrop');
+      if(existing){
+        existing.outerHTML=window.__nextPhasePopupHtmlV3();
+      }
+    };
+
+    window.__nextPhasePopupHtmlV3=function(){
+      const tab=window.__nextPhaseActiveTab || 'status';
+      const tabBtn=function(id,label){
+        return `<button type="button" class="next-phase-popup-tab ${tab===id?'active':''}" onclick="switchNextPhasePopupTab('${id}')">${label}</button>`;
+      };
+
+      const status=typeof statusContent==='function' ? statusContent() : `<div class="next-phase-popup-card full"><h4>Current Status</h4><p>Frontend Stable + Supabase Proof of Concept ผ่านแล้ว และตอนนี้ Pause อยู่</p></div>`;
+      const next=typeof nextContent==='function' ? nextContent() : `<div class="next-phase-popup-card full"><h4>Next Phase</h4><p>Phase ถัดไปคือ Edit / Update Class to Supabase เมื่อพร้อมใช้งานจริง</p></div>`;
+      const checklist=typeof checklistContent==='function' ? checklistContent() : `<div class="next-phase-popup-card full"><h4>Resume Checklist</h4><p>Export Backup JSON และยืนยันวันเริ่มใช้งานจริงก่อน Resume</p></div>`;
+
+      let body=status;
+      if(tab==='next')body=next;
+      if(tab==='checklist')body=checklist;
+      if(tab==='bridge')body=supabaseBridgePopupHtml();
+
+      return `<div id="nextPhasePopupBackdrop" class="next-phase-modal-backdrop" onclick="closeNextPhasePopup(event)">
+        <div class="next-phase-modal" onclick="event.stopPropagation()">
+          <div class="next-phase-modal-head">
+            <div>
+              <h3>${safeIcon('workflow',18)} Next Phase / Supabase Migration Status</h3>
+              <p>สถานะและเครื่องมือทดสอบ Supabase ถูกเก็บไว้ใน Popup นี้ เพื่อลดความยาวของหน้า Backup</p>
+            </div>
+            <button type="button" class="next-phase-close" onclick="closeNextPhasePopup()">×</button>
+          </div>
+          <div class="next-phase-popup-tabs">
+            ${tabBtn('status','Current Status')}
+            ${tabBtn('bridge','Supabase Bridge')}
+            ${tabBtn('next','Next Phase')}
+            ${tabBtn('checklist','Resume Checklist')}
+          </div>
+          <div id="nextPhasePopupBody" class="next-phase-popup-body">
+            ${body}
+          </div>
+        </div>
+      </div>`;
+    };
+  }
+
+  function updateCompactCardCopy(){
+    const card=document.getElementById('nextPhaseCompactCard');
+    if(!card)return;
+    const p=card.querySelector('p');
+    if(p)p.textContent='สรุปสถานะ Supabase / เครื่องมือ Bridge / แผนงานถัดไป ถูกเก็บไว้ใน Popup เพื่อลดความลายตาของหน้า Backup';
+    const btn=card.querySelector('button');
+    if(btn)btn.innerHTML=safeIcon('file',15)+' View Next Phase / Supabase';
+  }
+
+  function run(){
+    replacePopupFunctions();
+    removeBridgeFromBackupPage();
+    updateCompactCardCopy();
+  }
+
+  const prevRender=window.render;
+  if(typeof prevRender==='function'&&!prevRender.__moveSupabaseBridgePopupV3){
+    window.render=function(){
+      const result=prevRender.apply(this,arguments);
+      try{setTimeout(run,0);}catch(e){}
+      return result;
+    };
+    window.render.__moveSupabaseBridgePopupV3=true;
   }
 
   document.addEventListener('click',function(){
-    setTimeout(injectVisibleCard,80);
+    setTimeout(run,80);
   },true);
 
-  setTimeout(injectVisibleCard,0);
-  setTimeout(injectVisibleCard,500);
+  setTimeout(run,0);
+  setTimeout(run,600);
 })();
 </script>
-<!-- === END SUPABASE SAVE CLASS 3B === -->
+<!-- === END MOVE SUPABASE BRIDGE INTO NEXT PHASE POPUP V3 === -->
 
 
 </body>
