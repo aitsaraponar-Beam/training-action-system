@@ -39648,29 +39648,6 @@ tr:hover td{
     }
   }
 
-  // Wrap Step 27 dispatcher if it exists, otherwise wrap render lightly.
-  const oldRecovery=window.recoveryRender;
-  if(typeof oldRecovery==='function' && !oldRecovery.__step28PlannedFallback){
-    const wrapped=function(){
-      const result=oldRecovery.apply(this,arguments);
-      setTimeout(patchDom,0);
-      return result;
-    };
-    wrapped.__step28PlannedFallback=true;
-    window.recoveryRender=wrapped;
-    window.render=wrapped;
-  }else if(typeof window.render==='function' && !window.render.__step28PlannedFallback){
-    const oldRender=window.render;
-    const wrapped=function(){
-      const result=oldRender.apply(this,arguments);
-      setTimeout(patchDom,0);
-      return result;
-    };
-    wrapped.__step28PlannedFallback=true;
-    window.render=wrapped;
-  }
-
-  setTimeout(patchDom,0);
   try{console.info(PATCH_ID+' loaded')}catch(e){}
 })();
 </script>
@@ -39757,28 +39734,6 @@ tr:hover td{
     }
   }
 
-  const oldRecovery = window.recoveryRender;
-  if(typeof oldRecovery === 'function' && !oldRecovery.__step29CompactFallback){
-    const wrapped = function(){
-      const result = oldRecovery.apply(this, arguments);
-      setTimeout(applyStep29, 0);
-      return result;
-    };
-    wrapped.__step29CompactFallback = true;
-    window.recoveryRender = wrapped;
-    window.render = wrapped;
-  }else if(typeof window.render === 'function' && !window.render.__step29CompactFallback){
-    const oldRender = window.render;
-    const wrapped = function(){
-      const result = oldRender.apply(this, arguments);
-      setTimeout(applyStep29, 0);
-      return result;
-    };
-    wrapped.__step29CompactFallback = true;
-    window.render = wrapped;
-  }
-
-  setTimeout(applyStep29, 0);
 })();
 </script>
 <!-- === END RECOVERY STEP 29 === -->
@@ -40601,6 +40556,67 @@ body[data-production-render="step37"] .overview-readiness-empty{
     justify-content:flex-start;
   }
 }
+@media(max-width:760px){
+  body[data-production-render="step37"]{
+    overflow:auto;
+  }
+  body[data-production-render="step37"] .app{
+    display:block;
+    height:auto;
+    min-height:100vh;
+    overflow:visible;
+  }
+  body[data-production-render="step37"] .sidebar{
+    width:100%;
+    min-height:0;
+    box-shadow:0 12px 28px rgba(8,36,92,.18);
+  }
+  body[data-production-render="step37"] .brand{
+    height:auto;
+    padding:14px 16px 10px;
+  }
+  body[data-production-render="step37"] .nav{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding:0 12px 14px;
+    scrollbar-width:none;
+  }
+  body[data-production-render="step37"] .nav::-webkit-scrollbar{
+    display:none;
+  }
+  body[data-production-render="step37"] .nav button{
+    width:auto;
+    min-width:max-content;
+    min-height:42px;
+    padding:10px 12px;
+    border-radius:16px;
+  }
+  body[data-production-render="step37"] .nav button.active:before{
+    display:none;
+  }
+  body[data-production-render="step37"] .main{
+    min-height:0;
+    overflow:visible;
+  }
+  body[data-production-render="step37"] .header{
+    height:auto;
+    min-height:0;
+    display:grid;
+    gap:12px;
+    padding:16px;
+  }
+  body[data-production-render="step37"] .header-actions{
+    width:100%;
+    justify-content:flex-start;
+    overflow-x:auto;
+    padding-bottom:2px;
+  }
+  body[data-production-render="step37"] .content{
+    overflow:visible;
+    padding:14px;
+  }
+}
 </style>
 <script id="production-step37-single-render-owner">
 (function(){
@@ -41312,6 +41328,7 @@ body[data-production-render="step37"] .overview-readiness-empty{
     try{if(typeof window.hydrateIcons==='function')window.hydrateIcons()}catch(error){}
     try{if(typeof window.applyAdminAccessUI==='function')window.applyAdminAccessUI()}catch(error){}
     applyProductionLanguage();
+    try{if(typeof window.restoreCalendarLegend==='function')window.restoreCalendarLegend()}catch(error){}
     patchOverviewKpiCards();
     mountProductionOverviewFilter();
     try{if(typeof window.saveState==='function')window.saveState()}catch(error){}
@@ -42129,16 +42146,6 @@ html body .sidebar .sidebar-system-footer span{
     restoreLegend();
   };
 
-  const previousRender=window.render;
-  if(typeof previousRender==='function'&&!previousRender.__calendarLegendColorIconsStep36){
-    window.render=function(){
-      const result=previousRender.apply(this,arguments);
-      try{restoreLegend();}catch(e){}
-      return result;
-    };
-    window.render.__calendarLegendColorIconsStep36=true;
-  }
-
   const previousApply=window.trainingI18n?.apply;
   if(typeof previousApply==='function'&&!previousApply.__calendarLegendColorIconsStep36){
     window.trainingI18n.apply=function(){
@@ -42364,15 +42371,6 @@ html body .sidebar .sidebar-system-footer span{
     });
   }
 
-  const prevRender=window.render;
-  if(typeof prevRender==='function'&&!prevRender.__settingsBackupSupabaseV3){
-    window.render=function(){
-      const result=prevRender.apply(this,arguments);
-      try{setTimeout(cleanupTabs,0);}catch(e){}
-      return result;
-    };
-    window.render.__settingsBackupSupabaseV3=true;
-  }
   setTimeout(cleanupTabs,0);
 })();
 </script>
@@ -43124,15 +43122,6 @@ html body .sidebar .sidebar-system-footer span{
     }
   }
 
-  const prevRender=window.render;
-  if(typeof prevRender==='function'&&!prevRender.__supabaseLoadNoRerenderV5){
-    window.render=function(){
-      const result=prevRender.apply(this,arguments);
-      try{setTimeout(restoreLastOutput,0);}catch(e){}
-      return result;
-    };
-    window.render.__supabaseLoadNoRerenderV5=true;
-  }
 })();
 </script>
 <!-- === END SUPABASE LOAD NO-RERENDER V5 === -->
@@ -43536,16 +43525,6 @@ html body .sidebar .sidebar-system-footer span{
     else shell.appendChild(card);
   }
 
-  const prevRender=window.render;
-  if(typeof prevRender==='function'&&!prevRender.__nextPhaseCompactPopupV2){
-    window.render=function(){
-      const result=prevRender.apply(this,arguments);
-      try{setTimeout(injectCompactCard,0);}catch(e){}
-      return result;
-    };
-    window.render.__nextPhaseCompactPopupV2=true;
-  }
-
   document.addEventListener('keydown',function(e){
     if(e.key==='Escape')closeNextPhasePopup();
   });
@@ -43723,16 +43702,6 @@ html body .sidebar .sidebar-system-footer span{
     updateCompactCardCopy();
   }
 
-  const prevRender=window.render;
-  if(typeof prevRender==='function'&&!prevRender.__moveSupabaseBridgePopupV3){
-    window.render=function(){
-      const result=prevRender.apply(this,arguments);
-      try{setTimeout(run,0);}catch(e){}
-      return result;
-    };
-    window.render.__moveSupabaseBridgePopupV3=true;
-  }
-
   document.addEventListener('click',function(){
     setTimeout(run,80);
   },true);
@@ -43743,6 +43712,26 @@ html body .sidebar .sidebar-system-footer span{
 </script>
 <!-- === END MOVE SUPABASE BRIDGE INTO NEXT PHASE POPUP V3 === -->
 
-
+<style id="production-step37-mobile-cascade-fix">
+@media(max-width:760px){
+  html body[data-production-render="step37"] .app{
+    display:block!important;
+    height:auto!important;
+    min-height:100vh!important;
+    overflow:visible!important;
+  }
+  html body[data-production-render="step37"] .sidebar{
+    width:100%!important;
+    max-width:none!important;
+    min-height:0!important;
+  }
+  html body[data-production-render="step37"] .main,
+  html body[data-production-render="step37"] .content{
+    width:100%!important;
+    max-width:none!important;
+    overflow:visible!important;
+  }
+}
+</style>
 </body>
 </html>
