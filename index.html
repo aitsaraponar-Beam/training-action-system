@@ -42243,10 +42243,12 @@ html body .sidebar .sidebar-system-footer span{
       <div class="supabase-bridge-actions">
         <button type="button" class="btn secondary" onclick="saveSupabaseReadonlyConfig()">${safeIcon('check',15)} Save Config</button>
         <button type="button" class="btn" onclick="testSupabaseClassesReadOnly()">${safeIcon('workflow',15)} Test Read Classes</button>
+        <button type="button" class="btn" onclick="loadSupabaseClassesToAppReadonly()">${safeIcon('class',15)} Load Supabase Classes to App</button>
         <button type="button" class="btn secondary" onclick="clearSupabaseReadonlyConfig()">${safeIcon('delete',15)} Clear</button>
       </div>
       <div class="supabase-bridge-output" id="supabaseBridgeOutput">Ready. ใส่ key แล้วกด Save Config หรือ Test Read Classes</div>
       <div class="supabase-bridge-note">Security note: The key is stored only in this browser localStorage for testing. Do not commit secret/service_role key to GitHub.</div>
+      <div class="supabase-bridge-note">Phase 2: กด Load Supabase Classes to App เพื่อดึงข้อมูล classes เข้า state.classes แบบชั่วคราว ยังไม่บันทึกถาวรและยังไม่แก้ปุ่ม Save/Add Class</div>
     </section>`;
   }
 
@@ -42606,12 +42608,15 @@ html body .sidebar .sidebar-system-footer span{
 
 
 
-<!-- === SUPABASE CLASSES MANUAL LOAD V2: read-only temporary state sync === -->
-<script id="supabase-classes-manual-load-v2">
+
+
+
+<!-- === SUPABASE CLASSES MANUAL LOAD V3: direct button support === -->
+<script id="supabase-classes-manual-load-v3">
 (function(){
   'use strict';
-  if(window.__supabaseClassesManualLoadV2)return;
-  window.__supabaseClassesManualLoadV2=true;
+  if(window.__supabaseClassesManualLoadV3)return;
+  window.__supabaseClassesManualLoadV3=true;
 
   const STORAGE_KEY='trainingActionSupabaseReadonlyConfigV1';
 
@@ -42622,11 +42627,6 @@ html body .sidebar .sidebar-system-footer span{
 
   function getConfig(){
     try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{};}catch(e){return {};}
-  }
-
-  function safeIcon(name,size){
-    try{if(typeof icon==='function')return icon(name,size||16);}catch(e){}
-    return '';
   }
 
   function ensureSupabaseSdk(){
@@ -42733,7 +42733,6 @@ html body .sidebar .sidebar-system-footer span{
       const mapped=(data||[]).map(mapSupabaseClass);
       const result=mergeClassesIntoState(mapped);
 
-      // Safety: temporary in-memory sync only until refresh.
       if(typeof render==='function')render();
 
       setTimeout(()=>{
@@ -42753,45 +42752,9 @@ html body .sidebar .sidebar-system-footer span{
       setBridgeOutput('เกิด error ระหว่าง Load Supabase Classes\\n\\n'+String(err));
     }
   };
-
-  function injectLoadButton(){
-    const card=document.getElementById('supabaseReadonlyBridgeCard');
-    if(!card)return;
-    if(document.getElementById('loadSupabaseClassesToAppBtn'))return;
-    const actions=card.querySelector('.supabase-bridge-actions');
-    if(!actions)return;
-    const btn=document.createElement('button');
-    btn.type='button';
-    btn.id='loadSupabaseClassesToAppBtn';
-    btn.className='btn';
-    btn.innerHTML=`${safeIcon('class',15)} Load Supabase Classes to App`;
-    btn.onclick=window.loadSupabaseClassesToAppReadonly;
-    actions.appendChild(btn);
-
-    const note=card.querySelector('.supabase-bridge-note');
-    if(note && !document.getElementById('supabaseManualLoadNote')){
-      const extra=document.createElement('div');
-      extra.id='supabaseManualLoadNote';
-      extra.className='supabase-bridge-note';
-      extra.textContent='Phase 2: Manual load only. This button maps Supabase classes into state.classes temporarily. It does not save localStorage and does not change Add Class save logic.';
-      note.insertAdjacentElement('afterend',extra);
-    }
-  }
-
-  const prevRender=window.render;
-  if(typeof prevRender==='function'&&!prevRender.__supabaseClassesManualLoadV2){
-    window.render=function(){
-      const result=prevRender.apply(this,arguments);
-      try{setTimeout(injectLoadButton,0);}catch(e){}
-      return result;
-    };
-    window.render.__supabaseClassesManualLoadV2=true;
-  }
-
-  setTimeout(injectLoadButton,0);
 })();
 </script>
-<!-- === END SUPABASE CLASSES MANUAL LOAD V2 === -->
+<!-- === END SUPABASE CLASSES MANUAL LOAD V3 === -->
 
 
 </body>
