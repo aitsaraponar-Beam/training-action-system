@@ -42605,5 +42605,194 @@ html body .sidebar .sidebar-system-footer span{
 <!-- === END DSD WORKFLOW UI RESTORE V1 === -->
 
 
+
+<!-- === SUPABASE CLASSES MANUAL LOAD V2: read-only temporary state sync === -->
+<script id="supabase-classes-manual-load-v2">
+(function(){
+  'use strict';
+  if(window.__supabaseClassesManualLoadV2)return;
+  window.__supabaseClassesManualLoadV2=true;
+
+  const STORAGE_KEY='trainingActionSupabaseReadonlyConfigV1';
+
+  function setBridgeOutput(message){
+    const el=document.getElementById('supabaseBridgeOutput');
+    if(el)el.textContent=message;
+  }
+
+  function getConfig(){
+    try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{};}catch(e){return {};}
+  }
+
+  function safeIcon(name,size){
+    try{if(typeof icon==='function')return icon(name,size||16);}catch(e){}
+    return '';
+  }
+
+  function ensureSupabaseSdk(){
+    return new Promise((resolve,reject)=>{
+      if(window.supabase && typeof window.supabase.createClient==='function'){resolve();return;}
+      const existing=document.querySelector('script[data-supabase-js-v2]');
+      if(existing){
+        existing.addEventListener('load',()=>resolve(),{once:true});
+        existing.addEventListener('error',()=>reject(new Error('Cannot load Supabase SDK')),{once:true});
+        return;
+      }
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      s.setAttribute('data-supabase-js-v2','true');
+      s.onload=()=>resolve();
+      s.onerror=()=>reject(new Error('Cannot load Supabase SDK'));
+      document.head.appendChild(s);
+    });
+  }
+
+  function mapSupabaseClass(row){
+    const classId = row.class_code || row.id;
+    const status = row.training_status || 'TBC';
+    return {
+      id: classId,
+      classCode: row.class_code || classId,
+      supabaseUuid: row.id || '',
+      source: 'supabase-readonly',
+      courseName: row.course_name || '',
+      batch: row.batch || '',
+      trainingType: row.training_type || 'Inhouse',
+      learningType: row.learning_type || '',
+      targetLevel: row.target_level || '',
+      site: row.site || '',
+      startDate: row.start_date || '',
+      endDate: row.end_date || row.start_date || '',
+      trainingHour: Number(row.training_hour || 0),
+      institute: row.institute || '',
+      instructorName: row.instructor_name || '',
+      hotel: row.hotel || '',
+      floor: row.floor || '',
+      room: row.room || '',
+      workflowStatus: row.workflow_status || 'Approval Form',
+      classStatus: status,
+      trainingStatusSimple: status,
+      dsdStatus: row.dsd_status || '',
+      staffListFile: row.staff_list_file || '',
+      note: row.note || '',
+      rawSupabaseData: row.raw_data || null,
+      dsdTracking: {
+        dsdCategory: row.training_type === 'Public' ? 'public' : row.training_type === 'E-Learning' ? 'elearning' : 'inhouse'
+      }
+    };
+  }
+
+  function mergeClassesIntoState(mapped){
+    state.classes = Array.isArray(state.classes) ? state.classes : [];
+    const byId = new Map(state.classes.map(c => [String(c.id), c]));
+    let inserted = 0;
+    let updated = 0;
+
+    mapped.forEach(item=>{
+      const key = String(item.id);
+      if(byId.has(key)){
+        const existing = byId.get(key);
+        byId.set(key, {...existing, ...item, _supabaseLoadedAt: new Date().toISOString()});
+        updated++;
+      }else{
+        byId.set(key, {...item, _supabaseLoadedAt: new Date().toISOString()});
+        inserted++;
+      }
+    });
+
+    state.classes = Array.from(byId.values());
+    return {inserted, updated, total: mapped.length};
+  }
+
+  window.loadSupabaseClassesToAppReadonly = async function(){
+    const cfg=getConfig();
+    const url=(document.getElementById('supabaseReadonlyUrl')?.value || cfg.url || '').trim();
+    const key=(document.getElementById('supabaseReadonlyKey')?.value || cfg.key || '').trim();
+
+    setBridgeOutput('Loading Supabase classes into app state temporarily...');
+
+    if(!url || !key){
+      setBridgeOutput('กรุณาใส่ Project URL และ Publishable / anon key แล้วกด Save Config ก่อน');
+      return;
+    }
+
+    try{
+      await ensureSupabaseSdk();
+      const client=window.supabase.createClient(url,key);
+      const {data,error}=await client
+        .from('classes')
+        .select('*')
+        .order('start_date',{ascending:true})
+        .limit(200);
+
+      if(error){
+        setBridgeOutput('Load Supabase classes ไม่ผ่าน\\n\\nError: '+error.message);
+        return;
+      }
+
+      const mapped=(data||[]).map(mapSupabaseClass);
+      const result=mergeClassesIntoState(mapped);
+
+      // Safety: temporary in-memory sync only until refresh.
+      if(typeof render==='function')render();
+
+      setTimeout(()=>{
+        setBridgeOutput(
+          'Load Supabase Classes to App: SUCCESS ✅\\n\\n'+
+          'Rows loaded from Supabase: '+result.total+'\\n'+
+          'Inserted to state.classes: '+result.inserted+'\\n'+
+          'Updated existing state.classes: '+result.updated+'\\n\\n'+
+          'ข้อมูลถูกใส่เข้า state.classes แบบชั่วคราวเท่านั้น\\n'+
+          'ยังไม่ได้ save ลง localStorage และยังไม่ได้แก้ Save/Add Class\\n\\n'+
+          'ลองไปที่ Overview Dashboard / Calendar / Add Class Master เพื่อดูผลได้'
+        );
+      },0);
+
+      if(typeof showFlowToast==='function')showFlowToast('Supabase classes loaded temporarily');
+    }catch(err){
+      setBridgeOutput('เกิด error ระหว่าง Load Supabase Classes\\n\\n'+String(err));
+    }
+  };
+
+  function injectLoadButton(){
+    const card=document.getElementById('supabaseReadonlyBridgeCard');
+    if(!card)return;
+    if(document.getElementById('loadSupabaseClassesToAppBtn'))return;
+    const actions=card.querySelector('.supabase-bridge-actions');
+    if(!actions)return;
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.id='loadSupabaseClassesToAppBtn';
+    btn.className='btn';
+    btn.innerHTML=`${safeIcon('class',15)} Load Supabase Classes to App`;
+    btn.onclick=window.loadSupabaseClassesToAppReadonly;
+    actions.appendChild(btn);
+
+    const note=card.querySelector('.supabase-bridge-note');
+    if(note && !document.getElementById('supabaseManualLoadNote')){
+      const extra=document.createElement('div');
+      extra.id='supabaseManualLoadNote';
+      extra.className='supabase-bridge-note';
+      extra.textContent='Phase 2: Manual load only. This button maps Supabase classes into state.classes temporarily. It does not save localStorage and does not change Add Class save logic.';
+      note.insertAdjacentElement('afterend',extra);
+    }
+  }
+
+  const prevRender=window.render;
+  if(typeof prevRender==='function'&&!prevRender.__supabaseClassesManualLoadV2){
+    window.render=function(){
+      const result=prevRender.apply(this,arguments);
+      try{setTimeout(injectLoadButton,0);}catch(e){}
+      return result;
+    };
+    window.render.__supabaseClassesManualLoadV2=true;
+  }
+
+  setTimeout(injectLoadButton,0);
+})();
+</script>
+<!-- === END SUPABASE CLASSES MANUAL LOAD V2 === -->
+
+
 </body>
 </html>
