@@ -6793,7 +6793,7 @@ function settingsTemplatesContent(){
     </div>
   </div>`;
 }
-function settingsBackupContent(){return `<div class="settings-layout"><div class="settings-card"><div class="settings-card-head"><div><h3>Backup & Restore</h3><p>Use this while the system is still a local HTML prototype without backend database.</p></div><span class="settings-pill">Local Data</span></div><div class="settings-backup-actions"><button class="btn" onclick="exportSystemBackup()">${icon("file",16)} Export Backup</button><label class="btn secondary" style="cursor:pointer">${icon("attach",16)} Import Backup<input type="file" accept=".json" style="display:none" onchange="importSystemBackup(this)"></label></div><div class="settings-mini-note" style="margin-top:14px">Backup includes classes, participants, attendance, after-class records, calendar items and settings.</div></div><div class="settings-danger"><h4>Danger Zone</h4><p>Reset should be used only for testing. PIN is required to reduce accidental data loss.</p><button class="btn danger" onclick="resetDemoDataWithPin()">Reset Demo Data</button></div></div>`}
+function settingsBackupContent(){return `<div class="settings-layout"><div class="settings-card"><div class="settings-card-head"><div><h3>Backup & Restore</h3><p>Use this while the system is still a local HTML prototype without backend database.</p></div><span class="settings-pill">Local Data</span></div><div class="settings-backup-actions"><button class="btn" onclick="exportSystemBackup()">${icon("file",16)} Export Backup</button><label class="btn secondary" style="cursor:pointer">${icon("attach",16)} Import Backup<input type="file" accept=".json" style="display:none" onchange="importSystemBackup(this)"></label></div><div class="settings-mini-note" style="margin-top:14px">Backup includes classes, participants, attendance, after-class records, calendar items and settings.</div></div><div class="settings-danger"><h4>Danger Zone</h4><p>Reset Program to Default will restore the system back to its initial program state. PIN is required to reduce accidental data loss.</p><button class="btn danger" onclick="resetDemoDataWithPin()">Reset Program to Default</button></div></div>`}
 function settingsInput(id,label,value,type="text"){return `<label class="settings-field"><span>${esc(label)}</span><input id="${id}" type="${type}" value="${esc(value||"")}"></label>`}
 function settingsSelect(id,label,options,value){return `<label class="settings-field"><span>${esc(label)}</span><select id="${id}">${(options||[]).map(o=>`<option value="${esc(o)}" ${String(o)===String(value)?"selected":""}>${esc(o)}</option>`).join("")}</select></label>`}
 function saveSystemProfileSettings(){ensureSettingsPhase1();state.settings.systemProfile={systemName:val("settingSystemName")||"Training Calendar Action Plan System",workspaceName:val("settingWorkspaceName")||"HRD Workspace",departmentName:val("settingDepartmentName")||"Human Resources Development"};saveState();render()}
@@ -42003,7 +42003,7 @@ html body .sidebar .sidebar-system-footer span{
     const modal=document.createElement('div');
     modal.id='resetDemoPinModalStep36';
     modal.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.42);display:grid;place-items:center;padding:20px';
-    modal.innerHTML='<div style="width:min(420px,94vw);background:#fff;border:1px solid #DCEBFF;border-radius:22px;box-shadow:0 24px 70px rgba(8,36,92,.24);padding:18px;display:grid;gap:13px"><div><h3 style="margin:0;color:#08245C;font-size:18px;font-weight:1000">Reset Demo Data</h3><p style="margin:5px 0 0;color:#64748B;font-size:13px;font-weight:800;line-height:1.45">Enter PIN to reset data back to the default state.</p></div><label style="display:grid;gap:7px;color:#64748B;font-size:12px;font-weight:1000">PIN<input id="resetDemoPinInputStep36" type="password" style="height:44px;border:1px solid #CBD5E1;border-radius:14px;padding:0 12px;color:#08245C;font-size:15px;font-weight:900;outline:none"></label><div id="resetDemoPinErrorStep36" style="min-height:18px;color:#E11D48;font-size:12px;font-weight:950"></div><div style="display:flex;justify-content:flex-end;gap:9px"><button type="button" id="resetDemoCancelStep36" class="btn secondary">Cancel</button><button type="button" id="resetDemoConfirmStep36" class="btn danger">Reset</button></div></div>';
+    modal.innerHTML='<div style="width:min(420px,94vw);background:#fff;border:1px solid #DCEBFF;border-radius:22px;box-shadow:0 24px 70px rgba(8,36,92,.24);padding:18px;display:grid;gap:13px"><div><h3 style="margin:0;color:#08245C;font-size:18px;font-weight:1000">Reset Program to Default</h3><p style="margin:5px 0 0;color:#64748B;font-size:13px;font-weight:800;line-height:1.45">Enter PIN to restore the program back to its initial default state.</p></div><label style="display:grid;gap:7px;color:#64748B;font-size:12px;font-weight:1000">PIN<input id="resetDemoPinInputStep36" type="password" style="height:44px;border:1px solid #CBD5E1;border-radius:14px;padding:0 12px;color:#08245C;font-size:15px;font-weight:900;outline:none"></label><div id="resetDemoPinErrorStep36" style="min-height:18px;color:#E11D48;font-size:12px;font-weight:950"></div><div style="display:flex;justify-content:flex-end;gap:9px"><button type="button" id="resetDemoCancelStep36" class="btn secondary">Cancel</button><button type="button" id="resetDemoConfirmStep36" class="btn danger">Reset Program</button></div></div>';
     document.body.appendChild(modal);
     const input=document.getElementById('resetDemoPinInputStep36');
     const error=document.getElementById('resetDemoPinErrorStep36');
@@ -42149,16 +42149,142 @@ html body .sidebar .sidebar-system-footer span{
     window.trainingI18n.apply.__calendarLegendColorIconsStep36=true;
   }
 
-  const app=document.getElementById('app');
-  if(app){
-    const observer=new MutationObserver(function(){
-      if(window.state?.active==='calendar')restoreLegend();
-    });
-    observer.observe(app,{childList:true,subtree:true});
-  }
+  // Freeze fix: do not observe #app here. restoreLegend() writes to legend.innerHTML,
+  // which can trigger recursive DOM mutations and lock the UI.
   setTimeout(restoreLegend,0);
 })();
 </script>
+
+
+<!-- === SETTINGS BACKUP UI POLISH V2: clean Backup UI + remove Templates guard === -->
+<style id="settings-backup-ui-polish-v2">
+.settings-backup-modern{display:grid;gap:18px}
+.settings-backup-modern-card{background:#fff;border:1px solid #DCEBFF;border-radius:24px;padding:18px;box-shadow:0 14px 34px rgba(8,36,92,.06)}
+.settings-backup-modern-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:14px;border-bottom:1px solid #EEF4FF;margin-bottom:14px}
+.settings-backup-modern-head h3{margin:0;color:#08245C;font-size:18px;font-weight:1000;letter-spacing:-.2px}
+.settings-backup-modern-head p{margin:5px 0 0;color:#64748B;font-size:13px;font-weight:800;line-height:1.45}
+.settings-backup-modern-pill{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;border:1px solid #BFDBFE;background:#EFF6FF;color:#075FDB;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:1000}
+.settings-backup-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.settings-backup-action{min-height:118px;border:1px solid #E2EDFF;border-radius:20px;background:linear-gradient(135deg,#F8FBFF,#FFFFFF);padding:14px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start}
+.settings-backup-action-icon{width:44px;height:44px;border-radius:16px;background:#EFF6FF;color:#075FDB;display:grid;place-items:center;flex:0 0 44px}
+.settings-backup-action-body{min-width:0;display:grid;gap:8px}
+.settings-backup-action-body h4{margin:0;color:#08245C;font-size:14px;font-weight:1000}
+.settings-backup-action-body p{margin:0;color:#64748B;font-size:12px;font-weight:800;line-height:1.45}
+.settings-backup-action-body .btn{width:max-content;min-height:38px;padding:9px 13px;border-radius:14px;font-size:12px}
+.settings-backup-note{margin-top:12px;border:1px dashed #BFDBFE;background:#F8FBFF;color:#475569;border-radius:16px;padding:11px 13px;font-size:12px;font-weight:800;line-height:1.45}
+.settings-backup-danger{border:1px solid #FECACA;background:linear-gradient(135deg,#FFF1F2,#FFFFFF);border-radius:24px;padding:18px;box-shadow:0 14px 34px rgba(225,29,72,.06)}
+.settings-backup-danger h4{margin:0;color:#BE123C;font-size:15px;font-weight:1000}
+.settings-backup-danger p{margin:7px 0 14px;color:#64748B;font-size:13px;font-weight:800;line-height:1.5}
+.settings-backup-danger .btn{background:#111827;color:#fff;box-shadow:none;border-radius:14px;padding:11px 15px}
+.settings-backup-danger .btn:hover{filter:brightness(1.05)}
+@media(max-width:900px){.settings-backup-action-grid{grid-template-columns:1fr}.settings-backup-modern-head{display:grid}}
+</style>
+
+<script id="settings-backup-ui-polish-v2">
+(function(){
+  'use strict';
+  if(window.__settingsBackupUiPolishV2)return;
+  window.__settingsBackupUiPolishV2=true;
+
+  function safeIcon(name,size){try{if(typeof icon==='function')return icon(name,size||16);}catch(e){} return '';}
+
+  function backupContent(){
+    const integrity=(typeof window.renderDataIntegrityPanel==='function')?window.renderDataIntegrityPanel():'';
+    return `<div class="settings-backup-modern">
+      <section class="settings-backup-modern-card">
+        <div class="settings-backup-modern-head">
+          <div><h3>Backup & Restore</h3><p>Export or import local system data before backend migration. Use JSON backup when moving browser, testing GitHub Pages, or preparing Supabase sync.</p></div>
+          <span class="settings-backup-modern-pill">Local JSON Backup</span>
+        </div>
+        <div class="settings-backup-action-grid">
+          <div class="settings-backup-action">
+            <div class="settings-backup-action-icon">${safeIcon('file',18)}</div>
+            <div class="settings-backup-action-body">
+              <h4>Export Backup JSON</h4>
+              <p>Download current system data as a JSON file for safety backup.</p>
+              <button type="button" class="btn" onclick="exportSystemBackup()">${safeIcon('file',15)} Export JSON</button>
+            </div>
+          </div>
+          <div class="settings-backup-action">
+            <div class="settings-backup-action-icon">${safeIcon('attach',18)}</div>
+            <div class="settings-backup-action-body">
+              <h4>Import Backup JSON</h4>
+              <p>Restore system data from a previously exported JSON backup file.</p>
+              <label class="btn secondary" style="cursor:pointer;width:max-content">${safeIcon('attach',15)} Import JSON
+                <input type="file" accept=".json,application/json" style="display:none" onchange="importSystemBackup(this)">
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="settings-backup-note">Backup includes classes, participants, attendance, after-class records, calendar items and settings.</div>
+      </section>
+      <section class="settings-backup-danger">
+        <h4>Danger Zone</h4>
+        <p><strong>Reset Program to Default</strong> will restore the system back to its initial program state. PIN is required to reduce accidental data loss.</p>
+        <button type="button" class="btn danger" onclick="resetDemoDataWithPin()">Reset Program to Default</button>
+      </section>
+      ${integrity}
+    </div>`;
+  }
+
+  window.settingsBackupContent=backupContent;
+  const SETTINGS_TABS_CLEAN=['system','training','dsdWorkflow','backup'];
+
+  function tabButton(k,l,ic,a){
+    return `<button type="button" class="settings-tab-btn ${a===k?'active':''}" onclick="setSettingsTab('${k}')">${safeIcon(ic,15)} ${l}</button>`;
+  }
+
+  window.setSettingsTab=function(t){
+    state.ui=state.ui||{};
+    if(t==='templates'||t==='language')t='system';
+    state.ui.settingsTab=SETTINGS_TABS_CLEAN.includes(t)?t:'system';
+    try{if(typeof saveState==='function')saveState();}catch(e){}
+    if(typeof render==='function')render();
+  };
+
+  window.renderSettings=function(){
+    try{if(typeof ensureSettingsPhase1==='function')ensureSettingsPhase1();}catch(e){}
+    state.ui=state.ui||{};
+    if(!SETTINGS_TABS_CLEAN.includes(state.ui.settingsTab))state.ui.settingsTab='system';
+    const tab=state.ui.settingsTab;
+    const content =
+      tab==='system' && typeof settingsSystemContent==='function' ? settingsSystemContent() :
+      tab==='training' && typeof settingsTrainingContent==='function' ? settingsTrainingContent() :
+      tab==='dsdWorkflow' && typeof settingsDsdWorkflowContent==='function' ? settingsDsdWorkflowContent() :
+      backupContent();
+    return `${pageHead('Setting','Friendly control center for system defaults, DSD rules and backup.','settings')}
+      <div class="settings-shell">
+        <div class="settings-tabs"><div class="settings-tab-grid" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+          ${tabButton('system','System','settings',tab)}
+          ${tabButton('training','Training','class',tab)}
+          ${tabButton('dsdWorkflow','DSD & Workflow','workflow',tab)}
+          ${tabButton('backup','Backup','attach',tab)}
+        </div></div>
+        ${content}
+      </div>`;
+  };
+
+  function cleanupTemplatesUI(){
+    document.querySelectorAll('.settings-tab-btn').forEach(function(btn){
+      const text=(btn.textContent||'').trim().toLowerCase();
+      if(text.includes('template')||text.includes('language'))btn.remove();
+    });
+  }
+
+  const prevRender=window.render;
+  if(typeof prevRender==='function'&&!prevRender.__settingsBackupUiPolishV2){
+    window.render=function(){
+      const result=prevRender.apply(this,arguments);
+      try{cleanupTemplatesUI();}catch(e){}
+      return result;
+    };
+    window.render.__settingsBackupUiPolishV2=true;
+  }
+  setTimeout(cleanupTemplatesUI,0);
+})();
+</script>
+<!-- === END SETTINGS BACKUP UI POLISH V2 === -->
+
 
 </body>
 </html>
