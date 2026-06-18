@@ -42757,5 +42757,210 @@ html body .sidebar .sidebar-system-footer span{
 <!-- === END SUPABASE CLASSES MANUAL LOAD V3 === -->
 
 
+
+<!-- === SUPABASE BRIDGE BUTTON HARDEN V4: direct test + load handlers === -->
+<script id="supabase-bridge-button-harden-v4">
+(function(){
+  'use strict';
+  if(window.__supabaseBridgeButtonHardenV4)return;
+  window.__supabaseBridgeButtonHardenV4=true;
+
+  const STORAGE_KEY='trainingActionSupabaseReadonlyConfigV1';
+
+  function getConfig(){
+    try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{};}catch(e){return {};}
+  }
+
+  function ensureOutputBox(){
+    let el=document.getElementById('supabaseBridgeOutput');
+    if(el)return el;
+    const card=document.getElementById('supabaseReadonlyBridgeCard');
+    if(!card)return null;
+    el=document.createElement('div');
+    el.id='supabaseBridgeOutput';
+    el.className='supabase-bridge-output';
+    el.textContent='Ready.';
+    card.appendChild(el);
+    return el;
+  }
+
+  function setBridgeOutput(message){
+    const el=ensureOutputBox();
+    if(el)el.textContent=message;
+    else alert(message);
+  }
+
+  function readBridgeInput(){
+    const cfg=getConfig();
+    const url=(document.getElementById('supabaseReadonlyUrl')?.value || cfg.url || '').trim();
+    const key=(document.getElementById('supabaseReadonlyKey')?.value || cfg.key || '').trim();
+    return {url,key};
+  }
+
+  function ensureSupabaseSdk(){
+    return new Promise((resolve,reject)=>{
+      if(window.supabase && typeof window.supabase.createClient==='function'){resolve();return;}
+      const existing=document.querySelector('script[data-supabase-js-v2]');
+      if(existing){
+        if(window.supabase && typeof window.supabase.createClient==='function'){resolve();return;}
+        existing.addEventListener('load',()=>resolve(),{once:true});
+        existing.addEventListener('error',()=>reject(new Error('Cannot load Supabase SDK')),{once:true});
+        setTimeout(()=>{
+          if(window.supabase && typeof window.supabase.createClient==='function')resolve();
+        },400);
+        return;
+      }
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      s.setAttribute('data-supabase-js-v2','true');
+      s.onload=()=>resolve();
+      s.onerror=()=>reject(new Error('Cannot load Supabase SDK. Please check internet connection or CDN blocking.'));
+      document.head.appendChild(s);
+    });
+  }
+
+  window.testSupabaseClassesReadOnly = async function(){
+    const {url,key}=readBridgeInput();
+    setBridgeOutput('Testing Supabase connection...\nกำลังอ่านข้อมูลจาก table: classes');
+
+    if(!url || !key){
+      setBridgeOutput('ยังไม่ได้ใส่ Project URL หรือ Publishable / anon key\n\nให้ใส่ 2 ช่องนี้ก่อน แล้วกด Save Config จากนั้นกด Test Read Classes อีกครั้ง');
+      return;
+    }
+
+    if(!/^https:\/\/.+\.supabase\.co\/?$/.test(url)){
+      setBridgeOutput('Project URL ดูไม่ถูกต้อง\n\nตัวอย่างที่ถูกต้อง:\nhttps://kpfzptkhggcdeymflmxp.supabase.co');
+      return;
+    }
+
+    try{
+      await ensureSupabaseSdk();
+      if(!window.supabase || typeof window.supabase.createClient!=='function'){
+        setBridgeOutput('โหลด Supabase SDK ไม่สำเร็จ\n\nลอง Refresh หน้าเว็บด้วย Ctrl + F5 แล้วกด Test อีกครั้ง');
+        return;
+      }
+
+      const client=window.supabase.createClient(url,key);
+      const {data,error}=await client
+        .from('classes')
+        .select('id,class_code,course_name,batch,training_type,site,start_date,end_date,workflow_status,training_status')
+        .limit(10);
+
+      if(error){
+        setBridgeOutput(
+          'Supabase Test: FAILED\n\n'+
+          'Error: '+error.message+'\n\n'+
+          'จุดที่ควรเช็ก:\n'+
+          '1. Project URL ถูกไหม\n'+
+          '2. Key เป็น publishable / anon key ไหม\n'+
+          '3. Table ชื่อ classes ใช่ไหม\n'+
+          '4. RLS มี SELECT policy แล้วไหม'
+        );
+        return;
+      }
+
+      const rows=(data||[]).map((r,i)=>`${i+1}. ${r.class_code||'-'} · ${r.course_name||'-'} · ${r.site||'-'} · ${r.training_status||'-'}`).join('\n');
+      setBridgeOutput(
+        'Supabase Read-only Test: SUCCESS ✅\n\n'+
+        'Rows loaded: '+(data||[]).length+'\n\n'+
+        (rows || 'No rows found')+
+        '\n\nตอนนี้อ่านข้อมูลได้แล้ว ขั้นต่อไปค่อยกด Load Supabase Classes to App'
+      );
+    }catch(err){
+      setBridgeOutput(
+        'เกิด error ระหว่าง Test Read Classes\n\n'+
+        String(err)+
+        '\n\nลองกด Ctrl + F5 แล้วทดสอบอีกครั้ง'
+      );
+    }
+  };
+
+  function mapSupabaseClass(row){
+    const classId=row.class_code || row.id;
+    const status=row.training_status || 'TBC';
+    return {
+      id:classId,
+      classCode:row.class_code || classId,
+      supabaseUuid:row.id || '',
+      source:'supabase-readonly',
+      courseName:row.course_name || '',
+      batch:row.batch || '',
+      trainingType:row.training_type || 'Inhouse',
+      learningType:row.learning_type || '',
+      targetLevel:row.target_level || '',
+      site:row.site || '',
+      startDate:row.start_date || '',
+      endDate:row.end_date || row.start_date || '',
+      trainingHour:Number(row.training_hour || 0),
+      institute:row.institute || '',
+      instructorName:row.instructor_name || '',
+      hotel:row.hotel || '',
+      floor:row.floor || '',
+      room:row.room || '',
+      workflowStatus:row.workflow_status || 'Approval Form',
+      classStatus:status,
+      trainingStatusSimple:status,
+      dsdStatus:row.dsd_status || '',
+      staffListFile:row.staff_list_file || '',
+      note:row.note || '',
+      rawSupabaseData:row.raw_data || null,
+      dsdTracking:{dsdCategory:row.training_type==='Public'?'public':row.training_type==='E-Learning'?'elearning':'inhouse'}
+    };
+  }
+
+  window.loadSupabaseClassesToAppReadonly = async function(){
+    const {url,key}=readBridgeInput();
+    setBridgeOutput('Loading Supabase classes into app state temporarily...');
+
+    if(!url || !key){
+      setBridgeOutput('กรุณาใส่ Project URL และ Publishable / anon key แล้วกด Save Config ก่อน');
+      return;
+    }
+
+    try{
+      await ensureSupabaseSdk();
+      const client=window.supabase.createClient(url,key);
+      const {data,error}=await client.from('classes').select('*').order('start_date',{ascending:true}).limit(200);
+
+      if(error){
+        setBridgeOutput('Load Supabase classes ไม่ผ่าน\n\nError: '+error.message);
+        return;
+      }
+
+      state.classes=Array.isArray(state.classes)?state.classes:[];
+      const byId=new Map(state.classes.map(c=>[String(c.id),c]));
+      let inserted=0,updated=0;
+      (data||[]).map(mapSupabaseClass).forEach(item=>{
+        const key=String(item.id);
+        if(byId.has(key)){
+          byId.set(key,{...byId.get(key),...item,_supabaseLoadedAt:new Date().toISOString()});
+          updated++;
+        }else{
+          byId.set(key,{...item,_supabaseLoadedAt:new Date().toISOString()});
+          inserted++;
+        }
+      });
+      state.classes=Array.from(byId.values());
+
+      if(typeof render==='function')render();
+
+      setTimeout(()=>{
+        setBridgeOutput(
+          'Load Supabase Classes to App: SUCCESS ✅\n\n'+
+          'Rows loaded from Supabase: '+(data||[]).length+'\n'+
+          'Inserted to state.classes: '+inserted+'\n'+
+          'Updated existing state.classes: '+updated+'\n\n'+
+          'ข้อมูลเข้าเว็บแบบชั่วคราวเท่านั้น ยังไม่บันทึกถาวร'
+        );
+      },0);
+    }catch(err){
+      setBridgeOutput('เกิด error ระหว่าง Load Supabase Classes\n\n'+String(err));
+    }
+  };
+})();
+</script>
+<!-- === END SUPABASE BRIDGE BUTTON HARDEN V4 === -->
+
+
 </body>
 </html>
