@@ -43138,5 +43138,528 @@ html body .sidebar .sidebar-system-footer span{
 <!-- === END SUPABASE LOAD NO-RERENDER V5 === -->
 
 
+
+<!-- === SUPABASE SAVE CLASS 3A: separate Add Class button only === -->
+<style id="supabase-save-class-3a-style">
+.supabase-save-hint{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:8px;
+  color:#64748B;
+  font-size:12px;
+  font-weight:850;
+  line-height:1.4;
+}
+.btn.supabase-save-btn{
+  background:linear-gradient(135deg,#047857,#059669);
+  color:#fff;
+  border-color:#047857;
+}
+.btn.supabase-save-btn:hover{
+  filter:brightness(.98);
+}
+</style>
+
+<script id="supabase-save-class-3a-script">
+(function(){
+  'use strict';
+  if(window.__supabaseSaveClass3A)return;
+  window.__supabaseSaveClass3A=true;
+
+  const STORAGE_KEY='trainingActionSupabaseReadonlyConfigV1';
+
+  function getConfig(){
+    try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{};}catch(e){return {};}
+  }
+
+  function safeIcon(name,size){
+    try{if(typeof icon==='function')return icon(name,size||16);}catch(e){}
+    return '';
+  }
+
+  function safeVal(id){
+    try{return (document.getElementById(id)?.value || '').trim();}catch(e){return '';}
+  }
+
+  function ensureSupabaseSdk(){
+    return new Promise((resolve,reject)=>{
+      if(window.supabase && typeof window.supabase.createClient==='function'){resolve();return;}
+      const existing=document.querySelector('script[data-supabase-js-v2]');
+      if(existing){
+        existing.addEventListener('load',()=>resolve(),{once:true});
+        existing.addEventListener('error',()=>reject(new Error('Cannot load Supabase SDK')),{once:true});
+        setTimeout(()=>{
+          if(window.supabase && typeof window.supabase.createClient==='function')resolve();
+        },400);
+        return;
+      }
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      s.setAttribute('data-supabase-js-v2','true');
+      s.onload=()=>resolve();
+      s.onerror=()=>reject(new Error('Cannot load Supabase SDK'));
+      document.head.appendChild(s);
+    });
+  }
+
+  function readSupabaseConfig(){
+    const cfg=getConfig();
+    const url=(cfg.url || document.getElementById('supabaseReadonlyUrl')?.value || '').trim();
+    const key=(cfg.key || document.getElementById('supabaseReadonlyKey')?.value || '').trim();
+    return {url,key};
+  }
+
+  function buildSupabaseClassPayload(){
+    if(typeof captureAddClassDraft==='function'){
+      try{captureAddClassDraft();}catch(e){}
+    }
+    const d=state?.ui?.addClassDraft || {};
+    const trainingType=d.trainingType || safeVal('trainingType') || 'Inhouse';
+    const now=new Date();
+    const stamp=now.getFullYear().toString()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0')+String(now.getSeconds()).padStart(2,'0');
+    const courseName=d.courseName || safeVal('courseName');
+    const payload={
+      class_code:'CLS-SB-'+stamp,
+      course_name:courseName,
+      batch:d.batch || safeVal('batch') || '',
+      training_type:trainingType,
+      learning_type:d.learningType || safeVal('learningType') || '',
+      target_level:d.targetLevel || safeVal('targetLevel') || '',
+      site:d.site || safeVal('site') || '',
+      start_date:d.startDate || safeVal('startDate') || null,
+      end_date:d.endDate || safeVal('endDate') || d.startDate || safeVal('startDate') || null,
+      training_hour:Number(d.trainingHour || safeVal('trainingHour') || 0),
+      institute:d.institute || safeVal('institute') || '',
+      instructor_name:d.instructorName || safeVal('instructorName') || '',
+      hotel:d.hotel || safeVal('hotel') || '',
+      floor:d.floor || safeVal('floor') || '',
+      room:d.room || safeVal('room') || '',
+      workflow_status:'Approval Form',
+      training_status:d.classStatus || safeVal('classStatus') || 'TBC',
+      dsd_status:'',
+      staff_list_file:state?.ui?.pendingStaffListFile || state?.ui?.staffImportFileName || '',
+      note:'',
+      raw_data:{
+        source:'training-action-github-pages',
+        phase:'3A-save-to-supabase-button',
+        localDraft:d,
+        savedAt:new Date().toISOString()
+      }
+    };
+    return payload;
+  }
+
+  window.saveCurrentAddClassToSupabase3A = async function(){
+    const payload=buildSupabaseClassPayload();
+
+    if(!payload.course_name){
+      alert('กรุณากรอก Course Name ก่อน Save to Supabase');
+      return;
+    }
+
+    const {url,key}=readSupabaseConfig();
+    if(!url || !key){
+      alert('ยังไม่มี Supabase config\n\nให้ไปที่ Setting → สำรองข้อมูล → ใส่ Project URL / key แล้วกด Save Config ก่อน');
+      return;
+    }
+
+    const ok=confirm(
+      'Save to Supabase?\n\n'+
+      'รอบนี้จะบันทึกเข้า Supabase table: classes เท่านั้น\n'+
+      'ยังไม่บันทึกเข้า Class Master เดิม และยังไม่แก้ปุ่ม Save Class เดิม\n\n'+
+      'Course: '+payload.course_name
+    );
+    if(!ok)return;
+
+    try{
+      if(typeof showFlowToast==='function')showFlowToast('Saving class to Supabase...');
+      await ensureSupabaseSdk();
+      const client=window.supabase.createClient(url,key);
+      const {data,error}=await client
+        .from('classes')
+        .insert(payload)
+        .select('id,class_code,course_name,site,start_date,training_status')
+        .single();
+
+      if(error){
+        alert(
+          'Save to Supabase ไม่ผ่าน\n\n'+
+          error.message+
+          '\n\nจุดที่ควรเช็ก: RLS insert policy / column name / Project URL & key'
+        );
+        return;
+      }
+
+      alert(
+        'Save to Supabase: SUCCESS ✅\n\n'+
+        'Class Code: '+(data?.class_code || payload.class_code)+'\n'+
+        'Course: '+(data?.course_name || payload.course_name)+'\n\n'+
+        'ขั้นต่อไป: ไปที่ Setting → สำรองข้อมูล แล้วกด Test Read Classes หรือ Load Supabase Classes to App เพื่อดูข้อมูลนี้ในระบบ'
+      );
+      if(typeof showFlowToast==='function')showFlowToast('Saved to Supabase');
+    }catch(err){
+      alert('เกิด error ระหว่าง Save to Supabase\n\n'+String(err));
+    }
+  };
+
+  function supabaseSaveButtonHtml(){
+    return `<button type="button" class="btn supabase-save-btn" onclick="saveCurrentAddClassToSupabase3A()">${safeIcon('database',16)} Save to Supabase</button>`;
+  }
+
+  function enhanceRenderAddClass(){
+    if(typeof window.renderAddClass!=='function' || window.renderAddClass.__supabaseSave3A)return;
+    const previous=window.renderAddClass;
+    window.renderAddClass=function(){
+      let html=previous.apply(this,arguments);
+      if(!html.includes('Save to Supabase')){
+        html=html.replace(
+          /<div class="form-actions"><button class="btn" onclick="openSaveClassConfirmation\(\)">([\s\S]*?)Save Class<\/button><\/div>/,
+          `<div class="form-actions"><button class="btn" onclick="openSaveClassConfirmation()">$1Save Class</button>${supabaseSaveButtonHtml()}</div>
+           <div class="supabase-save-hint">${safeIcon('info',14)} Save Class = บันทึกเข้าเว็บเดิม / Save to Supabase = ทดสอบบันทึกเข้า database จริง</div>`
+        );
+      }
+      return html;
+    };
+    window.renderAddClass.__supabaseSave3A=true;
+  }
+
+  function injectButtonFallback(){
+    if(state?.active!=='addClass')return;
+    if(document.getElementById('saveToSupabase3AFallbackBtn'))return;
+    const actions=[...document.querySelectorAll('.form-actions')].find(el=>el.textContent.includes('Save Class'));
+    if(!actions)return;
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.id='saveToSupabase3AFallbackBtn';
+    btn.className='btn supabase-save-btn';
+    btn.innerHTML=safeIcon('database',16)+' Save to Supabase';
+    btn.onclick=window.saveCurrentAddClassToSupabase3A;
+    actions.appendChild(btn);
+    const hint=document.createElement('div');
+    hint.className='supabase-save-hint';
+    hint.innerHTML=safeIcon('info',14)+' Save Class = บันทึกเข้าเว็บเดิม / Save to Supabase = ทดสอบบันทึกเข้า database จริง';
+    actions.insertAdjacentElement('afterend',hint);
+  }
+
+  enhanceRenderAddClass();
+
+  const prevRender=window.render;
+  if(typeof prevRender==='function'&&!prevRender.__supabaseSave3A){
+    window.render=function(){
+      enhanceRenderAddClass();
+      const result=prevRender.apply(this,arguments);
+      try{setTimeout(injectButtonFallback,0);}catch(e){}
+      return result;
+    };
+    window.render.__supabaseSave3A=true;
+  }
+
+  setTimeout(injectButtonFallback,0);
+})();
+</script>
+<!-- === END SUPABASE SAVE CLASS 3A === -->
+
+
+
+<!-- === SUPABASE SAVE CLASS 3B: visible fallback card for Add Class === -->
+<style id="supabase-save-class-3b-style">
+.supabase-save-3b-card{
+  margin:14px 0;
+  border:1px solid #A7F3D0;
+  background:linear-gradient(135deg,#ECFDF5,#FFFFFF);
+  border-radius:22px;
+  padding:14px;
+  box-shadow:0 14px 30px rgba(4,120,87,.08);
+}
+.supabase-save-3b-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:10px;
+}
+.supabase-save-3b-head h4{
+  margin:0;
+  color:#065F46;
+  font-size:15px;
+  font-weight:1000;
+}
+.supabase-save-3b-head p{
+  margin:5px 0 0;
+  color:#64748B;
+  font-size:12px;
+  font-weight:850;
+  line-height:1.45;
+}
+.supabase-save-3b-pill{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid #A7F3D0;
+  background:#FFFFFF;
+  color:#047857;
+  border-radius:999px;
+  padding:7px 10px;
+  white-space:nowrap;
+  font-size:11px;
+  font-weight:1000;
+}
+.btn.supabase-save-btn{
+  background:linear-gradient(135deg,#047857,#059669);
+  color:#fff;
+  border-color:#047857;
+}
+.supabase-save-3b-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.supabase-save-3b-note{
+  margin-top:9px;
+  color:#64748B;
+  font-size:12px;
+  font-weight:850;
+  line-height:1.45;
+}
+</style>
+
+<script id="supabase-save-class-3b-script">
+(function(){
+  'use strict';
+  if(window.__supabaseSaveClass3B)return;
+  window.__supabaseSaveClass3B=true;
+
+  const STORAGE_KEY='trainingActionSupabaseReadonlyConfigV1';
+
+  function getConfig(){
+    try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')||{};}catch(e){return {};}
+  }
+
+  function safeIcon(name,size){
+    try{if(typeof icon==='function')return icon(name,size||16);}catch(e){}
+    return '';
+  }
+
+  function findInputByNames(names){
+    const selectors=[];
+    names.forEach(n=>{
+      selectors.push(`#${n}`);
+      selectors.push(`[name="${n}"]`);
+      selectors.push(`[data-field="${n}"]`);
+    });
+    for(const sel of selectors){
+      const el=document.querySelector(sel);
+      if(el && 'value' in el)return el;
+    }
+    return null;
+  }
+
+  function readVal(names, fallback=''){
+    const el=findInputByNames(Array.isArray(names)?names:[names]);
+    return (el?.value || fallback || '').trim();
+  }
+
+  function ensureSupabaseSdk(){
+    return new Promise((resolve,reject)=>{
+      if(window.supabase && typeof window.supabase.createClient==='function'){resolve();return;}
+      const existing=document.querySelector('script[data-supabase-js-v2]');
+      if(existing){
+        existing.addEventListener('load',()=>resolve(),{once:true});
+        existing.addEventListener('error',()=>reject(new Error('Cannot load Supabase SDK')),{once:true});
+        setTimeout(()=>{if(window.supabase && typeof window.supabase.createClient==='function')resolve();},400);
+        return;
+      }
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      s.setAttribute('data-supabase-js-v2','true');
+      s.onload=()=>resolve();
+      s.onerror=()=>reject(new Error('Cannot load Supabase SDK'));
+      document.head.appendChild(s);
+    });
+  }
+
+  function readSupabaseConfig(){
+    const cfg=getConfig();
+    return {
+      url:(cfg.url || document.getElementById('supabaseReadonlyUrl')?.value || '').trim(),
+      key:(cfg.key || document.getElementById('supabaseReadonlyKey')?.value || '').trim()
+    };
+  }
+
+  function getDraft(){
+    try{
+      if(typeof captureAddClassDraft==='function')captureAddClassDraft();
+    }catch(e){}
+    return state?.ui?.addClassDraft || {};
+  }
+
+  function makeClassCode(){
+    const n=new Date();
+    const stamp=n.getFullYear().toString()
+      +String(n.getMonth()+1).padStart(2,'0')
+      +String(n.getDate()).padStart(2,'0')
+      +'-'
+      +String(n.getHours()).padStart(2,'0')
+      +String(n.getMinutes()).padStart(2,'0')
+      +String(n.getSeconds()).padStart(2,'0');
+    return 'CLS-SB-'+stamp;
+  }
+
+  function buildPayload(){
+    const d=getDraft();
+    const courseName=d.courseName || readVal(['courseName','course-name','addCourseName','course']);
+    const trainingType=d.trainingType || readVal(['trainingType','training-type'],'Inhouse');
+    const startDate=d.startDate || readVal(['startDate','start-date','trainingDate','date']);
+    const endDate=d.endDate || readVal(['endDate','end-date'],startDate);
+
+    return {
+      class_code:makeClassCode(),
+      course_name:courseName,
+      batch:d.batch || readVal(['batch','classBatch'],''),
+      training_type:trainingType || 'Inhouse',
+      learning_type:d.learningType || readVal(['learningType','learning-type'],''),
+      target_level:d.targetLevel || readVal(['targetLevel','target-level'],''),
+      site:d.site || readVal(['site','trainingSite'],''),
+      start_date:startDate || null,
+      end_date:endDate || startDate || null,
+      training_hour:Number(d.trainingHour || readVal(['trainingHour','training-hour'],'0') || 0),
+      institute:d.institute || readVal(['institute'],''),
+      instructor_name:d.instructorName || readVal(['instructorName','instructor-name','instructor'],''),
+      hotel:d.hotel || readVal(['hotel'],''),
+      floor:d.floor || readVal(['floor'],''),
+      room:d.room || readVal(['room'],''),
+      workflow_status:'Approval Form',
+      training_status:d.classStatus || readVal(['classStatus','trainingStatus'],'TBC') || 'TBC',
+      dsd_status:'',
+      staff_list_file:state?.ui?.pendingStaffListFile || state?.ui?.staffImportFileName || '',
+      note:'',
+      raw_data:{
+        source:'training-action-github-pages',
+        phase:'3B-visible-save-card',
+        localDraft:d,
+        savedAt:new Date().toISOString()
+      }
+    };
+  }
+
+  window.saveCurrentAddClassToSupabase3A = async function(){
+    const payload=buildPayload();
+
+    if(!payload.course_name){
+      alert('กรุณากรอก Course Name ก่อน Save to Supabase');
+      return;
+    }
+
+    const {url,key}=readSupabaseConfig();
+    if(!url || !key){
+      alert('ยังไม่มี Supabase config\n\nให้ไปที่ Setting → สำรองข้อมูล → ใส่ Project URL / key แล้วกด Save Config ก่อน');
+      return;
+    }
+
+    const ok=confirm(
+      'Save to Supabase?\n\n'+
+      'รอบนี้จะบันทึกเข้า Supabase table: classes เท่านั้น\n'+
+      'ยังไม่แตะปุ่ม Save Class เดิม\n\n'+
+      'Course: '+payload.course_name
+    );
+    if(!ok)return;
+
+    try{
+      if(typeof showFlowToast==='function')showFlowToast('Saving class to Supabase...');
+      await ensureSupabaseSdk();
+      const client=window.supabase.createClient(url,key);
+      const {data,error}=await client
+        .from('classes')
+        .insert(payload)
+        .select('id,class_code,course_name,site,start_date,training_status')
+        .single();
+
+      if(error){
+        alert(
+          'Save to Supabase ไม่ผ่าน\n\n'+
+          error.message+
+          '\n\nจุดที่ควรเช็ก: RLS insert policy / column name / Project URL & key'
+        );
+        return;
+      }
+
+      alert(
+        'Save to Supabase: SUCCESS ✅\n\n'+
+        'Class Code: '+(data?.class_code || payload.class_code)+'\n'+
+        'Course: '+(data?.course_name || payload.course_name)+'\n\n'+
+        'ต่อไปไปที่ Setting → สำรองข้อมูล แล้วกด Test Read Classes เพื่อเช็กข้อมูลใหม่'
+      );
+      if(typeof showFlowToast==='function')showFlowToast('Saved to Supabase');
+    }catch(err){
+      alert('เกิด error ระหว่าง Save to Supabase\n\n'+String(err));
+    }
+  };
+
+  function isAddClassPage(){
+    if(state?.active==='addClass')return true;
+    const text=(document.body?.innerText || '').toLowerCase();
+    return text.includes('add class') && (text.includes('course name') || text.includes('save class'));
+  }
+
+  function cardHtml(){
+    return `<section id="supabaseSave3BCard" class="supabase-save-3b-card">
+      <div class="supabase-save-3b-head">
+        <div>
+          <h4>${safeIcon('database',16)} Supabase Test Save</h4>
+          <p>ปุ่มนี้ใช้ทดสอบบันทึก Class ปัจจุบันเข้า Supabase เท่านั้น ปุ่ม Save Class เดิมยังทำงานเหมือนเดิม</p>
+        </div>
+        <span class="supabase-save-3b-pill">Phase 3A</span>
+      </div>
+      <div class="supabase-save-3b-actions">
+        <button type="button" class="btn supabase-save-btn" onclick="saveCurrentAddClassToSupabase3A()">${safeIcon('database',16)} Save to Supabase</button>
+      </div>
+      <div class="supabase-save-3b-note">กรอก Course Name อย่างน้อย 1 ค่า แล้วกด Save to Supabase เพื่อทดสอบ insert เข้า table classes</div>
+    </section>`;
+  }
+
+  function injectVisibleCard(){
+    if(!isAddClassPage())return;
+    if(document.getElementById('supabaseSave3BCard'))return;
+
+    const targets=[
+      document.querySelector('.form-actions'),
+      [...document.querySelectorAll('button')].find(b=>(b.textContent||'').trim().toLowerCase().includes('save class'))?.parentElement,
+      document.querySelector('form'),
+      document.querySelector('.page-body'),
+      document.querySelector('#app')
+    ].filter(Boolean);
+
+    const target=targets[0];
+    if(!target)return;
+
+    if(target.classList && target.classList.contains('form-actions')){
+      target.insertAdjacentHTML('afterend',cardHtml());
+    }else{
+      target.insertAdjacentHTML('beforeend',cardHtml());
+    }
+  }
+
+  const prevRender=window.render;
+  if(typeof prevRender==='function'&&!prevRender.__supabaseSave3B){
+    window.render=function(){
+      const result=prevRender.apply(this,arguments);
+      try{setTimeout(injectVisibleCard,0);}catch(e){}
+      return result;
+    };
+    window.render.__supabaseSave3B=true;
+  }
+
+  document.addEventListener('click',function(){
+    setTimeout(injectVisibleCard,80);
+  },true);
+
+  setTimeout(injectVisibleCard,0);
+  setTimeout(injectVisibleCard,500);
+})();
+</script>
+<!-- === END SUPABASE SAVE CLASS 3B === -->
+
+
 </body>
 </html>
